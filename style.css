@@ -1,0 +1,150 @@
+:root {
+  /* Premium Vibrant Color Palette */
+  --primary: #FF6B6B;     /* Vibrant Coral Red */
+  --secondary: #4ECDC4;   /* Bright Teal */
+  --accent: #FFE66D;      /* Sunny Yellow */
+  --background: #F7FFF7;  /* Soft Mint White */
+  --text-dark: #2F3542;   /* Deep Slate */
+  --text-light: #FFFFFF;
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-glow: 0 0 20px rgba(78, 205, 196, 0.6);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+  color: var(--text-dark);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+#app {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Glassmorphism Card Style */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  padding: 2.5rem;
+  box-shadow: var(--shadow-md);
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.glass-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-glow);
+}
+
+/* Buttons */
+.btn {
+  background: var(--primary);
+  color: var(--text-light);
+  border: none;
+  border-radius: 50px;
+  padding: 1rem 2rem;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 6px 0 #D63031;
+  transition: all 0.1s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.btn:active {
+  transform: translateY(6px);
+  box-shadow: 0 0 0 #D63031;
+}
+
+.btn-secondary {
+  background: var(--secondary);
+  box-shadow: 0 6px 0 #0ABDE3;
+}
+
+.btn-secondary:active {
+  box-shadow: 0 0 0 #0ABDE3;
+}
+
+/* Typography */
+h1 {
+  font-size: 3.5rem;
+  font-weight: 800;
+  color: var(--text-dark);
+  text-align: center;
+  margin-bottom: 2rem;
+  letter-spacing: -1px;
+}
+
+.title-bounce {
+    color: var(--primary);
+    text-shadow: 3px 3px 0px var(--accent);
+    animation: bounce 2s infinite;
+}
+
+h2 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--secondary);
+  margin-bottom: 1.5rem;
+}
+
+/* Animations */
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-15px); }
+  60% { transform: translateY(-7px); }
+}
+
+@keyframes popIn {
+  0% { transform: scale(0.8); opacity: 0; }
+  80% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes float {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(5deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
+}
+
+/* Inputs */
+.word-input {
+    padding: 1rem 1.5rem; 
+    border-radius: 16px; 
+    border: 3px solid transparent; 
+    font-size: 1.2rem; 
+    font-family: 'Outfit', sans-serif; 
+    font-weight: 600;
+    outline: none;
+    background: rgba(255, 255, 255, 0.9);
+    transition: all 0.2s;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.word-input:focus {
+    border-color: var(--secondary);
+    box-shadow: 0 0 0 4px rgba(78, 205, 196, 0.2);
+    transform: scale(1.02);
+}
