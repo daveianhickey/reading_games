@@ -1,0 +1,4 @@
+TEST: Bubble Creation and Animation
+✅ Initial bubble spawned correctly
+✅ Initial position set properly
+❌ Animation logic failed: Bubble bottom should have changed | Initial: -150px, New: -150px

@@ -1,0 +1,3 @@
+TEST: Bubble Creation and Animation
+❌ Initial generation failed: There should be 1 bubble created on start (Found 0)
+❌ Cannot verify bubble animation because none were created!

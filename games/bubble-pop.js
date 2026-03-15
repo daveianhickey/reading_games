@@ -38,9 +38,9 @@ export function initBubblePop(container, words, onBack) {
         
         bubble.className = 'bubble';
         bubble.style.position = 'absolute';
-        bubble.style.width = \`\${size}px\`;
-        bubble.style.height = \`\${size}px\`;
-        bubble.style.left = \`\${left}px\`;
+        bubble.style.width = `${size}px`;
+        bubble.style.height = `${size}px`;
+        bubble.style.left = `${left}px`;
         bubble.style.bottom = '-150px';
         bubble.style.borderRadius = '50%';
         bubble.style.background = 'radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.5) 60%, rgba(255, 255, 255, 0.2) 100%)';
@@ -50,7 +50,7 @@ export function initBubblePop(container, words, onBack) {
         bubble.style.justifyContent = 'center';
         bubble.style.alignItems = 'center';
         bubble.style.cursor = 'pointer';
-        bubble.style.fontSize = \`\${Math.min(size / 3.5, 30)}px\`;
+        bubble.style.fontSize = `${Math.min(size / 3.5, 30)}px`;
         bubble.style.fontWeight = '800';
         bubble.style.color = '#2F3542';
         bubble.style.textShadow = '0px 0px 8px white, 0px 0px 4px white';
@@ -146,8 +146,8 @@ export function initBubblePop(container, words, onBack) {
             const xOffset = Math.sin(b.wobble) * 2;
             let left = parseFloat(b.style.left) + xOffset;
             
-            b.style.bottom = \`\${bottom}px\`;
-            b.style.left = \`\${left}px\`;
+            b.style.bottom = `${bottom}px`;
+            b.style.left = `${left}px`;
 
             if (bottom > areaHeight + 150) {
                 b.parentNode.removeChild(b);
@@ -162,8 +162,8 @@ export function initBubblePop(container, words, onBack) {
         for (let i = 0; i < 30; i++) {
             const conf = document.createElement('div');
             conf.style.position = 'fixed';
-            conf.style.left = \`\${x}px\`;
-            conf.style.top = \`\${y}px\`;
+            conf.style.left = `${x}px`;
+            conf.style.top = `${y}px`;
             conf.style.width = '12px';
             conf.style.height = '12px';
             conf.style.background = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#FFF'][Math.floor(Math.random() * 4)];
@@ -184,9 +184,9 @@ export function initBubblePop(container, words, onBack) {
                 vy += 0.3; // gravity
                 let curLeft = parseFloat(conf.style.left);
                 let curTop = parseFloat(conf.style.top);
-                conf.style.left = \`\${curLeft + vx}px\`;
-                conf.style.top = \`\${curTop + vy}px\`;
-                conf.style.transform = \`rotate(\${tick * 15}deg) scale(\${1 - tick/60})\`;
+                conf.style.left = `${curLeft + vx}px`;
+                conf.style.top = `${curTop + vy}px`;
+                conf.style.transform = `rotate(${tick * 15}deg) scale(${1 - tick/60})`;
 
                 if (tick < 60) {
                     requestAnimationFrame(animateConf);

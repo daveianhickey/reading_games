@@ -47,7 +47,8 @@ export function initMemoryMatch(container, words, onBack) {
                         aspect-ratio: 1/1; 
                         position: relative; 
                         transform-style: preserve-3d; 
-                        transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                        -webkit-transform-style: preserve-3d;
+                        transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), -webkit-transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
                         cursor: pointer;
                     ">
                         <!-- Front (Hidden side) -->
@@ -55,6 +56,7 @@ export function initMemoryMatch(container, words, onBack) {
                             position: absolute; 
                             width: 100%; 
                             height: 100%; 
+                            -webkit-backface-visibility: hidden;
                             backface-visibility: hidden; 
                             background: var(--background);
                             border: 3px solid var(--secondary);
@@ -66,6 +68,7 @@ export function initMemoryMatch(container, words, onBack) {
                             font-weight: 800;
                             color: var(--text-dark);
                             transform: rotateY(180deg);
+                            -webkit-transform: rotateY(180deg);
                             box-shadow: var(--shadow-sm);
                         ">
                             ${word}
@@ -75,6 +78,7 @@ export function initMemoryMatch(container, words, onBack) {
                             position: absolute; 
                             width: 100%; 
                             height: 100%; 
+                            -webkit-backface-visibility: hidden;
                             backface-visibility: hidden; 
                             background: var(--primary);
                             background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px);
@@ -83,6 +87,8 @@ export function initMemoryMatch(container, words, onBack) {
                             justify-content: center;
                             align-items: center;
                             font-size: 3rem;
+                            transform: rotateY(0deg);
+                            -webkit-transform: rotateY(0deg);
                             box-shadow: var(--shadow-md);
                         ">
                             ⭐
@@ -111,6 +117,7 @@ export function initMemoryMatch(container, words, onBack) {
         if (this.classList.contains('matched')) return;
 
         this.style.transform = 'rotateY(180deg)';
+        this.style.webkitTransform = 'rotateY(180deg)';
         
         flippedCards.push(this);
 
@@ -159,7 +166,9 @@ export function initMemoryMatch(container, words, onBack) {
 
         setTimeout(() => {
             flippedCards[0].style.transform = 'rotateY(0deg)';
+            flippedCards[0].style.webkitTransform = 'rotateY(0deg)';
             flippedCards[1].style.transform = 'rotateY(0deg)';
+            flippedCards[1].style.webkitTransform = 'rotateY(0deg)';
 
             resetBoard();
         }, 1000);
@@ -171,7 +180,7 @@ export function initMemoryMatch(container, words, onBack) {
 
     function updateScore(points) {
         score = Math.max(0, score + points);
-        document.getElementById('score').innerText = score;
+        document.getElementById('score').textContent = score;
         document.getElementById('score').style.animation = 'popIn 0.3s ease-out';
         setTimeout(() => document.getElementById('score').style.animation = 'none', 300);
     }
@@ -184,8 +193,8 @@ export function initMemoryMatch(container, words, onBack) {
         for (let i = 0; i < 15; i++) {
             const conf = document.createElement('div');
             conf.style.position = 'fixed';
-            conf.style.left = \`\${x}px\`;
-            conf.style.top = \`\${y}px\`;
+            conf.style.left = `\${x}px`;
+            conf.style.top = `\${y}px`;
             conf.style.width = '8px';
             conf.style.height = '8px';
             conf.style.background = ['#FF6B6B', '#4ECDC4', '#FFE66D'][Math.floor(Math.random() * 3)];
@@ -202,8 +211,8 @@ export function initMemoryMatch(container, words, onBack) {
             let tick = 0;
             function animateConf() {
                 tick++;
-                conf.style.left = \`\${parseFloat(conf.style.left) + vx}px\`;
-                conf.style.top = \`\${parseFloat(conf.style.top) + vy}px\`;
+                conf.style.left = `\${parseFloat(conf.style.left) + vx}px`;
+                conf.style.top = `\${parseFloat(conf.style.top) + vy}px`;
                 conf.style.opacity = 1 - (tick / 30);
 
                 if (tick < 30) {
@@ -220,8 +229,8 @@ export function initMemoryMatch(container, words, onBack) {
         for (let i = 0; i < 100; i++) {
             const conf = document.createElement('div');
             conf.style.position = 'fixed';
-            conf.style.left = \`\${Math.random() * window.innerWidth}px\`;
-            conf.style.top = \`\${-10}px\`;
+            conf.style.left = `\${Math.random() * window.innerWidth}px`;
+            conf.style.top = `\${-10}px`;
             conf.style.width = '10px';
             conf.style.height = '10px';
             conf.style.background = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#FFF', '#a1c4fd'][Math.floor(Math.random() * 5)];
@@ -240,9 +249,9 @@ export function initMemoryMatch(container, words, onBack) {
                 vy += 0.1; // gravity
                 let curLeft = parseFloat(conf.style.left);
                 let curTop = parseFloat(conf.style.top);
-                conf.style.left = \`\${curLeft + vx + Math.sin(tick*0.1)*2}px\`;
-                conf.style.top = \`\${curTop + vy}px\`;
-                conf.style.transform = \`rotate(\${tick * 5}deg)\`;
+                conf.style.left = `\${curLeft + vx + Math.sin(tick*0.1)*2}px`;
+                conf.style.top = `\${curTop + vy}px`;
+                conf.style.transform = `rotate(\${tick * 5}deg)`;
 
                 if (curTop < window.innerHeight) {
                     requestAnimationFrame(animateConf);

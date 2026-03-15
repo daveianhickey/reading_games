@@ -1,0 +1,6 @@
+TEST: Bubble Creation and Animation
+✅ Initial bubble spawned correctly
+✅ Initial position set properly
+DELTA TEST: -150px 1.8128546872569014
+DELTA POST: -150px -150px
+❌ Animation logic failed: Bubble bottom should have changed | Initial: -150px, New: -150px
