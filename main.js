@@ -108,6 +108,14 @@ function renderGameHub() {
         <button class="btn btn-secondary" style="width: 100%;">Play Now</button>
       </div>
 
+      <!-- Rocket Game Card -->
+      <div class="glass-card" style="text-align: center; cursor: pointer; animation: popIn 0.5s ease-out 0.3s both; display: flex; flex-direction: column; align-items: center;" id="game-rocket-race">
+        <div style="font-size: 5rem; margin-bottom: 1rem; animation: float 3s ease-in-out infinite 2s;">🚀</div>
+        <h2 style="color: #FFE66D; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">Rocket Race</h2>
+        <p style="font-size: 1.2rem; margin-bottom: 1.5rem; font-weight: 600;">Blast the correct words to space!</p>
+        <button class="btn btn-secondary" style="width: 100%; border-color: #FFE66D; box-shadow: 0 4px 0 #F39C12;">Play Now</button>
+      </div>
+
     </div>
   `;
 
@@ -123,6 +131,10 @@ function renderGameHub() {
   document.getElementById('game-memory-match').addEventListener('click', () => {
       startMemoryMatch();
   });
+  
+  document.getElementById('game-rocket-race').addEventListener('click', () => {
+      startRocketRace();
+  });
 }
 
 function startBubblePop() {
@@ -137,6 +149,15 @@ function startBubblePop() {
 function startMemoryMatch() {
     import('./games/memory-match.js').then(module => {
         module.initMemoryMatch(appContainer, words, renderGameHub);
+    }).catch(err => {
+        console.error("Failed to load game", err);
+        alert("Game is still being built!");
+    });
+}
+
+function startRocketRace() {
+    import('./games/rocket-race.js').then(module => {
+        module.initRocketRace(appContainer, words, renderGameHub);
     }).catch(err => {
         console.error("Failed to load game", err);
         alert("Game is still being built!");
