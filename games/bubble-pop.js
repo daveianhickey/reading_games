@@ -6,6 +6,7 @@ export function initBubblePop(container, words, onBack) {
     let isPlaying = true;
     let lastTime = 0;
     let bubbleSpawnTimer = 0;
+    let gameSpeedMultiplier = 1.0;
 
     container.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding: 0.5rem; background: var(--glass-bg); border-radius: 50px; backdrop-filter: blur(10px);">
@@ -89,6 +90,7 @@ export function initBubblePop(container, words, onBack) {
 
         if (correct) {
             score += 10;
+            gameSpeedMultiplier *= 1.05;
             document.getElementById('score').innerText = score;
             document.getElementById('score').style.animation = 'popIn 0.3s ease-out';
             setTimeout(() => document.getElementById('score').style.animation = 'none', 300);
@@ -152,8 +154,8 @@ export function initBubblePop(container, words, onBack) {
             }
 
             let bottom = parseFloat(b.style.bottom);
-            // Normalize speed by deltaTime
-            bottom += b.speed * (deltaTime / 16);
+            // Normalize speed by deltaTime, modified by the speed multiplier
+            bottom += b.speed * gameSpeedMultiplier * (deltaTime / 16);
             
             b.wobble += b.wobbleSpeed * (deltaTime / 16);
             const xOffset = Math.sin(b.wobble) * 2;
