@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  reading-games:
+    build:
+      context: .
+    ports:
+      # Maps the unprivileged Nginx layer inside the Dockerfile (8080) internally to your localhost port 8080.
+      # You can visit http://localhost:8080 after running 'docker-compose up'
+      - "8080:8080"
+    restart: unless-stopped
