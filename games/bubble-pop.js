@@ -97,7 +97,20 @@ export function initBubblePop(container, words, onBack) {
             createConfetti(clientX || (rect.left + rect.width/2), clientY || (rect.top + rect.height/2));
             
             targetWord = getRandomWord(words);
-            document.getElementById('target-word').innerText = targetWord;
+            const targetEl = document.getElementById('target-word');
+            targetEl.innerText = targetWord;
+            
+            // Impactful change animation: remove animation, re-trigger popIn & bounce
+            targetEl.style.animation = 'none';
+            void targetEl.offsetWidth; // force browser reflow
+            targetEl.style.animation = 'popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), bounce 2s infinite 0.5s';
+            targetEl.style.color = 'var(--secondary)'; // Flash to bright teal
+            targetEl.style.transform = 'scale(1.2)';
+            
+            setTimeout(() => {
+                targetEl.style.color = 'var(--primary)'; // Restore coral red
+                targetEl.style.transform = 'scale(1)';
+            }, 500);
             
             // Success flash
             gameArea.style.boxShadow = 'inset 0 0 80px rgba(78, 205, 196, 0.8)';
