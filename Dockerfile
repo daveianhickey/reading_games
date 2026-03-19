@@ -1,27 +1,29 @@
-# Stage 1: Build the Vite App for production
-FROM node:20-alpine AS builder
+# Use a lightweight Node image as requested
+FROM node:20-alpine
 
-# Set the working directory inside the container
+# Set working directory
 WORKDIR /app
 
-# Copy the package.json and install dependencies cleanly
+# Copy package files first
 COPY package*.json ./
+
+# Install ALL dependencies (necessary because Vite is specifically a devDependency required to build the app)
 RUN npm ci
 
-# Copy the rest of the application files
+# Copy the rest of your code
 COPY . .
 
-# Build the static site (transpiles and minimizes files into the /app/dist directory)
+# Build the static site into the /dist folder
 RUN npm run build
 
-# Stage 2: Serve the app using an optimized, lightweight web server
-# using the official unprivileged nginx image which runs natively as a non-root user (nginx UID 101)
-FROM nginxinc/nginx-unprivileged:alpine
+# Install a simple, official, minimalist Node static file server to host the built frontend
+RUN npm install -g serve
 
-# Copy the built assets from the 'builder' stage over to NGINX's default unprivileged html serving directory
-COPY --from=builder /app/dist /usr/share/nginx/html
+# CRITICAL SECURITY STEP: Switch away from root to the unprivileged 'node' user that comes built into the node:alpine image
+USER node
 
-# Documenting that port 8080 is used (Cloud Run listens to 8080 by default for container deployments)
+# Expose port (Cloud run uses PORT env or 8080 by default)
 EXPOSE 8080
 
-# The base container automatically starts the nginx server, so no CMD is strictly needed here.
+# The command to start your app
+CMD ["npm", "start"]
