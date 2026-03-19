@@ -41,6 +41,17 @@ jobs:
       # Configure Docker to securely login to your Google Artifact Registry
       - name: Configure Docker Auth
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      # ------ ADVANCED DIAGNOSTIC STEP ------
+      # This step explicitly forces Google Cloud to tell us EXACTLY what is going wrong
+      # and whether the action runner can even physically see your targeted repository.
+      - name: Diagnostic Ping
+        run: |
+          echo "Checking Repository Visibility..."
+          gcloud artifacts repositories describe ${{ env.REPO_NAME }} --location=${{ env.REGION }} --project=${{ env.PROJECT_ID }}
+          echo "Repository is visible! Checking Docker auth configurations..."
+          cat ~/.docker/config.json
+      # --------------------------------------
       
       # Build the Docker container 
       - name: Build Docker Image
