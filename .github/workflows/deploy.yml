@@ -13,6 +13,9 @@ env:
   REPO_NAME: reading-games-repo
   # The exact name of your deployed Cloud Run service
   SERVICE_NAME: reading-games-service
+  
+  # Silences the Node.js 20 deprecation warning
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build-and-deploy:
