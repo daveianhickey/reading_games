@@ -7,6 +7,37 @@ export function initBubblePop(container, words, onBack) {
     let lastTime = 0;
     let bubbleSpawnTimer = 0;
     let gameSpeedMultiplier = 1.0;
+    let penaltyActive = false;
+
+    const playSound = (type) => {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            if (type === 'ching') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(2000, audioCtx.currentTime + 0.1);
+                gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.05);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.5);
+            } else if (type === 'buzz') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 0.3);
+                gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.1);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            }
+        } catch(e) { console.warn("Audio not initialized"); }
+    };
 
     container.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding: 0.5rem; background: var(--glass-bg); border-radius: 50px; backdrop-filter: blur(10px);">
@@ -66,6 +97,7 @@ export function initBubblePop(container, words, onBack) {
 
         const handlePop = (e) => {
             e.preventDefault();
+            if (penaltyActive) return; // Prevent spamming buttons on error
             popBubble(bubble, wordText === targetWord, e.clientX, e.clientY);
         };
 
@@ -89,6 +121,7 @@ export function initBubblePop(container, words, onBack) {
         }, 150);
 
         if (correct) {
+            playSound('ching');
             score += 10;
             gameSpeedMultiplier *= 1.05;
             document.getElementById('score').innerText = score;
@@ -118,6 +151,10 @@ export function initBubblePop(container, words, onBack) {
             gameArea.style.boxShadow = 'inset 0 0 80px rgba(78, 205, 196, 0.8)';
             setTimeout(() => gameArea.style.boxShadow = 'inset 0 0 30px rgba(0,0,0,0.1)', 300);
         } else {
+            playSound('buzz');
+            penaltyActive = true;
+            setTimeout(() => { penaltyActive = false; }, 1000); // 1s freeze penalty
+            
             score = Math.max(0, score - 5);
             document.getElementById('score').innerText = score;
             
@@ -128,7 +165,11 @@ export function initBubblePop(container, words, onBack) {
             setTimeout(() => gameArea.style.transform = 'translate(0, 0)', 150);
             
             gameArea.style.boxShadow = 'inset 0 0 80px rgba(255, 107, 107, 0.8)';
-            setTimeout(() => gameArea.style.boxShadow = 'inset 0 0 30px rgba(0,0,0,0.1)', 300);
+            gameArea.style.pointerEvents = 'none'; // Lock clicks mechanically
+            setTimeout(() => {
+                gameArea.style.boxShadow = 'inset 0 0 30px rgba(0,0,0,0.1)';
+                gameArea.style.pointerEvents = 'auto'; // Unlock clicks
+            }, 1000);
         }
     }
 
