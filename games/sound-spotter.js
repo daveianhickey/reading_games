@@ -1,14 +1,7 @@
+import { SENTENCE_BANK } from './sentence-bank.js';
+
 export function initSoundSpotter(container, wordsList, onBack) {
     // 1. Static Reference Data from Phonics Briefing
-    const sentences = [
-        "I can see a ship and a chip.",
-        "The king is with the queen.",
-        "The rain is on the green tree.",
-        "The light is bright at night.",
-        "The goat is in the moon boot.",
-        "The fork is in the dark car.",
-        "I can hear the owl in the air."
-    ];
 
     const TRICKY_WORDS = [
         "the", "to", "i", "no", "put", "of", "is", "go", "into", "pull", 
@@ -27,6 +20,7 @@ export function initSoundSpotter(container, wordsList, onBack) {
     const PHONICS = [...TRIGRAPHS, ...DIGRAPHS];
 
     // 2. Game State
+    let deck = [];
     let currentSentenceIndex = 0;
     let currentSentence = "";
     let wordsData = []; // Mapped representation of the sentence logic
@@ -100,7 +94,7 @@ export function initSoundSpotter(container, wordsList, onBack) {
     document.getElementById('back-btn').addEventListener('click', onBack);
     document.getElementById('next-btn').addEventListener('click', () => {
         document.getElementById('next-btn').style.display = 'none';
-        currentSentenceIndex = (currentSentenceIndex + 1) % sentences.length;
+        currentSentenceIndex++;
         initRound();
     });
 
@@ -370,8 +364,21 @@ export function initSoundSpotter(container, wordsList, onBack) {
         });
     }
 
+    function shuffleDeck() {
+        deck = [...SENTENCE_BANK];
+        for (let i = deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [deck[i], deck[j]] = [deck[j], deck[i]];
+        }
+        currentSentenceIndex = 0;
+    }
+
     function initRound() {
-        currentSentence = sentences[currentSentenceIndex];
+        if (deck.length === 0 || currentSentenceIndex >= deck.length) {
+            shuffleDeck();
+        }
+        
+        currentSentence = deck[currentSentenceIndex];
         wordsData = parseSentence(currentSentence);
         renderBoard();
 
