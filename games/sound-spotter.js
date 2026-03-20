@@ -79,9 +79,11 @@ export function initSoundSpotter(container, wordsList, onBack) {
         
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding: 0.8rem; background: var(--glass-bg); border-radius: 50px; backdrop-filter: blur(10px); gap: 1rem;">
             <button class="btn btn-secondary" id="back-btn" style="padding: 0.5rem 1.5rem; text-transform: lowercase; flex-shrink: 0;">← back</button>
-            <h2 id="objective-msg" style="margin: 0; flex-grow: 1; text-align: center; color: var(--text-dark); text-transform: lowercase; font-size: 1.5rem;">Loading...</h2>
-            
-            <div id="counter-widget" style="display: none; color: white; padding: 0.5rem 1.5rem; border-radius: 30px; font-size: 2rem; font-weight: 800; flex-shrink: 0; transition: background 0.3s;">
+            <h2 id="objective-msg" style="margin: 0; flex-grow: 1; text-align: center; color: var(--text-dark); text-transform: lowercase; font-size: 1.8rem;">Loading...</h2>
+        </div>
+        
+        <div style="display: flex; justify-content: center; margin-bottom: -40px; position: relative; z-index: 10;">
+            <div id="counter-widget" style="display: none; color: white; padding: 1rem 3rem; border-radius: 50px; font-size: 4rem; font-weight: 900; transition: background 0.3s;">
                 <span id="counter-current">0</span> / <span id="counter-total">3</span> ⭐️
             </div>
         </div>
@@ -115,7 +117,7 @@ export function initSoundSpotter(container, wordsList, onBack) {
         }
         counterWidget.style.display = 'block';
         counterWidget.style.background = color;
-        counterWidget.style.boxShadow = `0 5px 0 ${shadowColor}`;
+        counterWidget.style.boxShadow = `0 8px 0 ${shadowColor}, 0 15px 30px rgba(0,0,0,0.3)`;
         counterCurrent.innerText = current;
         counterTotal.innerText = total;
         
