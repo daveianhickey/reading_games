@@ -79,7 +79,7 @@ export function initSoundSpotter(container, wordsList, onBack) {
         </div>
         
         <div style="display: flex; justify-content: center; margin-bottom: -40px; position: relative; z-index: 10;">
-            <div id="counter-widget" style="display: none; color: white; padding: 1rem 3rem; border-radius: 50px; font-size: 4rem; font-weight: 900; transition: background 0.3s;">
+            <div id="counter-widget" style="opacity: 0; pointer-events: none; color: white; padding: 1rem 3rem; border-radius: 50px; font-size: 4rem; font-weight: 900; transition: background 0.3s, opacity 0.3s;">
                 <span id="counter-current">0</span> / <span id="counter-total">3</span> ⭐️
             </div>
         </div>
@@ -108,10 +108,12 @@ export function initSoundSpotter(container, wordsList, onBack) {
 
     function updateCounterUI(current, total, color, shadowColor, show) {
         if (!show) {
-            counterWidget.style.display = 'none';
+            counterWidget.style.opacity = '0';
+            counterWidget.style.pointerEvents = 'none';
             return;
         }
-        counterWidget.style.display = 'block';
+        counterWidget.style.opacity = '1';
+        counterWidget.style.pointerEvents = 'auto';
         counterWidget.style.background = color;
         counterWidget.style.boxShadow = `0 8px 0 ${shadowColor}, 0 15px 30px rgba(0,0,0,0.3)`;
         counterCurrent.innerText = current;
