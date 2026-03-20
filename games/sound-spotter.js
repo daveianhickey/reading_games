@@ -74,6 +74,8 @@ export function initSoundSpotter(container, wordsList, onBack) {
             @media (max-width: 768px) {
                 .spotter-word { font-size: 3rem; margin: 0.5rem 0.5rem; }
                 .spotter-board { padding: 1rem; border-width: 6px; }
+                #counter-widget { font-size: 2.5rem !important; padding: 0.8rem 2rem !important; }
+                #objective-msg { font-size: 1.2rem !important; }
             }
         </style>
         
