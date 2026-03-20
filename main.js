@@ -116,6 +116,14 @@ function renderGameHub() {
         <button class="btn btn-secondary" style="width: 100%; border-color: #FFE66D; box-shadow: 0 4px 0 #F39C12;">Play Now</button>
       </div>
 
+      <!-- Sound Spotter Game Card -->
+      <div class="glass-card" style="text-align: center; cursor: pointer; animation: popIn 0.5s ease-out 0.4s both; display: flex; flex-direction: column; align-items: center;" id="game-sound-spotter">
+        <div style="font-size: 5rem; margin-bottom: 1rem; animation: float 3s ease-in-out infinite 1.5s;">🕵️</div>
+        <h2 style="color: #8E44AD; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);">Sound Spotter</h2>
+        <p style="font-size: 1.2rem; margin-bottom: 1.5rem; font-weight: 600;">Find digraphs & trigraphs in sentences!</p>
+        <button class="btn" style="width: 100%; background: #9B59B6; box-shadow: 0 8px 0 #8E44AD;">Play Now</button>
+      </div>
+
     </div>
   `;
 
@@ -134,6 +142,10 @@ function renderGameHub() {
   
   document.getElementById('game-rocket-race').addEventListener('click', () => {
       startRocketRace();
+  });
+  
+  document.getElementById('game-sound-spotter').addEventListener('click', () => {
+      startSoundSpotter();
   });
 }
 
@@ -158,6 +170,15 @@ function startMemoryMatch() {
 function startRocketRace() {
     import('./games/rocket-race.js').then(module => {
         module.initRocketRace(appContainer, words, renderGameHub);
+    }).catch(err => {
+        console.error("Failed to load game", err);
+        alert("Game is still being built!");
+    });
+}
+
+function startSoundSpotter() {
+    import('./games/sound-spotter.js').then(module => {
+        module.initSoundSpotter(appContainer, words, renderGameHub);
     }).catch(err => {
         console.error("Failed to load game", err);
         alert("Game is still being built!");
