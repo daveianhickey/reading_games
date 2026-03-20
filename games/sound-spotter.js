@@ -30,11 +30,10 @@ export function initSoundSpotter(container, wordsList, onBack) {
     let currentSentenceIndex = 0;
     let currentSentence = "";
     let wordsData = []; // Mapped representation of the sentence logic
-    let gameState = "TRICKY"; // Phases: TRICKY -> DIGRAPHS -> DOTS -> DONE
+    let gameState = "TRICKY"; // Phases: TRICKY -> DIGRAPHS -> DONE
 
     let trickyFound = 0, trickyTotal = 0;
     let phonicsFound = 0, phonicsTotal = 0;
-    let dotsFound = 0, dotsTotal = 0;
 
     // 3. UI Scaffolding
     container.innerHTML = `
@@ -78,9 +77,13 @@ export function initSoundSpotter(container, wordsList, onBack) {
             }
         </style>
         
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding: 0.5rem; background: var(--glass-bg); border-radius: 50px; backdrop-filter: blur(10px);">
-            <button class="btn btn-secondary" id="back-btn" style="padding: 0.5rem 1.5rem; text-transform: lowercase;">← back</button>
-            <h2 id="objective-msg" style="margin: 0; padding-right: 1.5rem; color: var(--text-dark); text-transform: lowercase; font-size: 1.5rem;">Loading...</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding: 0.8rem; background: var(--glass-bg); border-radius: 50px; backdrop-filter: blur(10px); gap: 1rem;">
+            <button class="btn btn-secondary" id="back-btn" style="padding: 0.5rem 1.5rem; text-transform: lowercase; flex-shrink: 0;">← back</button>
+            <h2 id="objective-msg" style="margin: 0; flex-grow: 1; text-align: center; color: var(--text-dark); text-transform: lowercase; font-size: 1.5rem;">Loading...</h2>
+            
+            <div id="counter-widget" style="display: none; color: white; padding: 0.5rem 1.5rem; border-radius: 30px; font-size: 2rem; font-weight: 800; flex-shrink: 0; transition: background 0.3s;">
+                <span id="counter-current">0</span> / <span id="counter-total">3</span> ⭐️
+            </div>
         </div>
         
         <div class="spotter-board" id="chalkboard">
@@ -99,6 +102,28 @@ export function initSoundSpotter(container, wordsList, onBack) {
 
     const board = document.getElementById('sentence-board');
     const msgEl = document.getElementById('objective-msg');
+    
+    // Dynamic Score Tracker Widget
+    const counterWidget = document.getElementById('counter-widget');
+    const counterCurrent = document.getElementById('counter-current');
+    const counterTotal = document.getElementById('counter-total');
+
+    function updateCounterUI(current, total, color, shadowColor, show) {
+        if (!show) {
+            counterWidget.style.display = 'none';
+            return;
+        }
+        counterWidget.style.display = 'block';
+        counterWidget.style.background = color;
+        counterWidget.style.boxShadow = `0 5px 0 ${shadowColor}`;
+        counterCurrent.innerText = current;
+        counterTotal.innerText = total;
+        
+        // Excite the counter automatically when the number strictly ticks up
+        counterWidget.style.animation = 'none';
+        void counterWidget.offsetWidth;
+        counterWidget.style.animation = 'popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+    }
 
     // 4. Audio Engine
     const playSound = (type) => {
@@ -184,8 +209,8 @@ export function initSoundSpotter(container, wordsList, onBack) {
     function parseSentence(sentenceText) {
         const rawWords = sentenceText.split(' ');
         let parsed = [];
-        trickyTotal = 0; phonicsTotal = 0; dotsTotal = 0;
-        trickyFound = 0; phonicsFound = 0; dotsFound = 0;
+        trickyTotal = 0; phonicsTotal = 0;
+        trickyFound = 0; phonicsFound = 0;
 
         for (let w of rawWords) {
             const cleanWord = w.toLowerCase().replace(/[^a-z]/g, '');
@@ -217,9 +242,9 @@ export function initSoundSpotter(container, wordsList, onBack) {
                     if (!matched) {
                         let char = w[i];
                         let isLetter = /[a-z]/i.test(char);
-                        obj.chunks.push({ text: char, isPhoneme: false, isSingle: isLetter, isFound: !isLetter }); 
+                        // We flag single sounds as naturally "found" already since there's no interactive phase for them
+                        obj.chunks.push({ text: char, isPhoneme: false, isSingle: isLetter, isFound: true }); 
                         i++;
-                        if (isLetter) dotsTotal++;
                     }
                 }
             }
@@ -234,18 +259,22 @@ export function initSoundSpotter(container, wordsList, onBack) {
         void msgEl.offsetWidth;
         
         if (newState === 'DIGRAPHS') {
-            if (phonicsTotal === 0) return transitionState('DOTS');
+            if (phonicsTotal === 0) return transitionState('DONE');
             msgEl.innerHTML = 'Phase 2: Spot the <span style="color:#E74C3C">Digraphs & Trigraphs</span>! <span style="font-family: monospace;">"_"</span>';
             msgEl.style.animation = 'popIn 0.5s';
-        } else if (newState === 'DOTS') {
-            if (dotsTotal === 0) return transitionState('DONE');
-            msgEl.innerHTML = 'Phase 3: Spot the <span style="color:#3498DB">Single Sounds</span>! <span style="font-family: monospace;">"•"</span>';
-            msgEl.style.animation = 'popIn 0.5s';
+            updateCounterUI(0, phonicsTotal, '#E74C3C', '#C0392B', true);
         } else if (newState === 'DONE') {
-            msgEl.innerHTML = 'Phase 4: <span style="color:#2ECC71">Read the sentence!</span>';
+            updateCounterUI(0, 0, '', '', false);
+            msgEl.innerHTML = 'Phase 3: <span style="color:#2ECC71">Read the sentence!</span>';
             msgEl.style.animation = 'bounce 1s infinite alternate';
             createConfetti(window.innerWidth/2, window.innerHeight/2);
             playSound('success');
+            
+            // Provide sound button dots automatically for all standard single sounds now that the interaction is over
+            document.querySelectorAll('.spotter-marker-box.single-sound-marker').forEach(markerBox => {
+                 markerBox.innerHTML = '<div style="width:12px; height:12px; background:#3498DB; border-radius:50%; margin-top:2px;"></div>';
+                 markerBox.parentElement.style.animation = 'popIn 0.5s ease-out';
+            });
             
             const nextBtn = document.getElementById('next-btn');
             nextBtn.style.display = 'block';
@@ -263,6 +292,8 @@ export function initSoundSpotter(container, wordsList, onBack) {
                 wordEl.style.color = '#2C3E50';
                 wordEl.style.transform = 'scale(1.1)';
                 playSound('bing');
+                
+                updateCounterUI(trickyFound, trickyTotal, '#F1C40F', '#D4AC0D', true);
                 
                 if (trickyFound >= trickyTotal) {
                     setTimeout(() => {
@@ -290,26 +321,13 @@ export function initSoundSpotter(container, wordsList, onBack) {
                 chunkEl.querySelector('.spotter-marker-box').style.borderBottom = '8px solid #E74C3C';
                 chunkEl.style.transform = 'translateY(-5px)';
                 
-                if (phonicsFound >= phonicsTotal) setTimeout(() => transitionState('DOTS'), 800);
+                updateCounterUI(phonicsFound, phonicsTotal, '#E74C3C', '#C0392B', true);
+                
+                if (phonicsFound >= phonicsTotal) setTimeout(() => transitionState('DONE'), 800);
             } else if (!chunk.isFound && chunk.isSingle) {
                 playSound('buzz');
                 chunkEl.style.animation = 'none'; void chunkEl.offsetWidth;
                 chunkEl.style.animation = 'shake 0.3s';
-            }
-        } else if (gameState === 'DOTS') {
-            if (chunk.isSingle && !chunk.isFound) {
-                chunk.isFound = true;
-                dotsFound++;
-                playSound('bing');
-                
-                chunkEl.querySelector('.spotter-marker-box').innerHTML = '<div style="width:12px; height:12px; background:#3498DB; border-radius:50%; margin-top:2px;"></div>';
-                chunkEl.style.transform = 'translateY(-5px)';
-                
-                if (dotsFound >= dotsTotal) setTimeout(() => transitionState('DONE'), 800);
-            } else if (!chunk.isFound) {
-                 playSound('buzz');
-                 chunkEl.style.animation = 'none'; void chunkEl.offsetWidth;
-                 chunkEl.style.animation = 'shake 0.3s';
             }
         }
     }
@@ -334,7 +352,7 @@ export function initSoundSpotter(container, wordsList, onBack) {
                     cEl.appendChild(textSpan);
 
                     let markerBox = document.createElement('div');
-                    markerBox.className = 'spotter-marker-box';
+                    markerBox.className = 'spotter-marker-box' + (chunk.isSingle ? ' single-sound-marker' : '');
                     cEl.appendChild(markerBox);
 
                     cEl.addEventListener('click', (e) => {
@@ -356,10 +374,11 @@ export function initSoundSpotter(container, wordsList, onBack) {
         if (trickyTotal > 0) {
             gameState = 'TRICKY';
             msgEl.innerHTML = 'Phase 1: Spot the <span style="color:#F1C40F">Tricky Words</span>!';
+            updateCounterUI(0, trickyTotal, '#F1C40F', '#D4AC0D', true);
         } else if (phonicsTotal > 0) {
             transitionState('DIGRAPHS');
         } else {
-            transitionState('DOTS');
+            transitionState('DONE');
         }
     }
 
