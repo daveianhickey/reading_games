@@ -6,21 +6,47 @@ export function initRocketRace(container, words, onBack) {
     let options = [];
 
     container.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding: 0.5rem; background: var(--glass-bg); border-radius: 50px; backdrop-filter: blur(10px);">
+        <style>
+            .rocket-target-word { font-size: 4rem; padding: 1rem 3rem; margin-bottom: 3rem; }
+            .rocket-dashboard-panel { width: 70%; padding: 2rem; }
+            .rocket-track-panel { width: 30%; }
+            .rocket-emoji { font-size: 5rem; }
+            .rocket-flame-emoji { font-size: 3rem; margin-top: -15px; }
+            .rocket-planet-emoji { font-size: 6rem; }
+            .rocket-options-rack { display: flex; gap: 1.5rem; justify-content: center; width: 100%; flex-wrap: wrap; text-transform: lowercase; }
+            .rocket-game-btn { font-size: 2rem; padding: 1rem 2rem; min-width: 150px; }
+            .rocket-win-h1 { font-size: 4rem; }
+            .rocket-win-p { font-size: 1.5rem; }
+            
+            @media (max-width: 768px) {
+                .rocket-target-word { font-size: 2rem !important; padding: 0.5rem 1rem !important; margin-bottom: 1.5rem !important; }
+                .rocket-dashboard-panel { width: 75% !important; padding: 0.5rem !important; }
+                .rocket-track-panel { width: 25% !important; }
+                .rocket-emoji { font-size: 3rem !important; }
+                .rocket-flame-emoji { font-size: 2rem !important; margin-top: -5px !important; }
+                .rocket-planet-emoji { font-size: 4rem !important; }
+                .rocket-options-rack { flex-direction: column !important; gap: 0.5rem !important; align-items: stretch; }
+                .rocket-game-btn { font-size: 1.5rem !important; padding: 0.5rem 1rem !important; min-width: unset !important; }
+                .rocket-win-h1 { font-size: 2.2rem !important; }
+                .rocket-win-p { font-size: 1.2rem !important; }
+            }
+        </style>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding: 0.5rem; background: var(--glass-bg); border-radius: 50px; backdrop-filter: blur(10px);">
             <button class="btn btn-secondary" id="back-btn" style="padding: 0.5rem 1.5rem; text-transform: lowercase;">← back</button>
-            <h2 style="margin: 0; padding-right: 1.5rem; color: var(--text-dark); text-transform: lowercase;">mission: <span id="progress-text" style="color: var(--primary);">0/${MAX_PROGRESS}</span></h2>
+            <h2 style="margin: 0; padding-right: 1.5rem; color: var(--text-dark); text-transform: lowercase; font-size: 1.5rem;">mission: <span id="progress-text" style="color: var(--primary);">0/${MAX_PROGRESS}</span></h2>
         </div>
         
-        <div class="glass-card" style="position: relative; height: 65vh; overflow: hidden; background: linear-gradient(180deg, #0b0f19 0%, #1a2a6c 50%, #b21f1f 100%); border-radius: 30px; box-shadow: inset 0 0 40px rgba(0,0,0,0.5); display: flex;" id="game-area">
+        <div class="glass-card" style="position: relative; height: 75vh; overflow: hidden; background: linear-gradient(180deg, #0b0f19 0%, #1a2a6c 50%, #b21f1f 100%); border-radius: 30px; box-shadow: inset 0 0 40px rgba(0,0,0,0.5); display: flex;" id="game-area">
             
             <!-- Stars background -->
             <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: radial-gradient(2px 2px at 20px 30px, #eee, rgba(0,0,0,0)), radial-gradient(2px 2px at 40px 70px, #fff, rgba(0,0,0,0)), radial-gradient(2px 2px at 90px 40px, #fff, rgba(0,0,0,0)), radial-gradient(2px 2px at 160px 120px, #ddd, rgba(0,0,0,0)); background-size: 200px 200px; opacity: 0.5; z-index: 0;"></div>
             
             <!-- Rocket Track Area (Left) -->
-            <div style="width: 30%; height: 100%; position: relative; border-right: 2px dashed rgba(255,255,255,0.2); z-index: 1;">
+            <div class="rocket-track-panel" style="height: 100%; position: relative; border-right: 2px dashed rgba(255,255,255,0.2); z-index: 1;">
                 
                 <!-- Destination Planet -->
-                <div id="planet" style="position: absolute; top: 5%; left: 50%; transform: translateX(-50%); font-size: 6rem; filter: drop-shadow(0 0 20px rgba(255,255,255,0.5));">🌕</div>
+                <div id="planet" class="rocket-planet-emoji" style="position: absolute; top: 5%; left: 50%; transform: translateX(-50%); filter: drop-shadow(0 0 20px rgba(255,255,255,0.5));">🌕</div>
                 
                 <!-- Waypoints -->
                 <div style="position: absolute; bottom: 25%; left: 50%; transform: translateX(-50%); color: white; opacity: 0.5;">⭐</div>
@@ -29,31 +55,31 @@ export function initRocketRace(container, words, onBack) {
                 <div style="position: absolute; bottom: 70%; left: 50%; transform: translateX(-50%); color: white; opacity: 0.5;">⭐</div>
                 
                 <!-- The Rocket -->
-                <div id="player-rocket" style="position: absolute; bottom: 10%; left: 50%; transform: translateX(-50%); transition: bottom 1s cubic-bezier(0.34, 1.56, 0.64, 1); display: flex; flex-direction: column; align-items: center;">
-                    <div style="font-size: 5rem; line-height: 1; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.5));">🚀</div>
-                    <div id="rocket-flame" style="font-size: 3rem; margin-top: -15px; animation: bounce 0.5s infinite alternate;">🔥</div>
+                <div id="player-rocket" style="position: absolute; bottom: 5%; left: 50%; transform: translateX(-50%); transition: bottom 1s cubic-bezier(0.34, 1.56, 0.64, 1); display: flex; flex-direction: column; align-items: center;">
+                    <div class="rocket-emoji" style="line-height: 1; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.5));">🚀</div>
+                    <div id="rocket-flame" class="rocket-flame-emoji" style="animation: bounce 0.5s infinite alternate;">🔥</div>
                 </div>
 
             </div>
 
             <!-- Dashboard Area (Right) -->
-            <div style="width: 70%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem; z-index: 1;">
+            <div class="rocket-dashboard-panel" style="height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1;">
                 
                 <div id="mission-panel" style="text-align: center; width: 100%;">
-                    <h2 style="color: white; font-size: 1.8rem; margin-bottom: 1rem; opacity: 0.9; text-transform: lowercase;">fuel the rocket with:</h2>
-                    <div id="target-word" style="background: rgba(255,255,255,0.1); border: 4px solid var(--primary); padding: 1rem 3rem; border-radius: 20px; font-size: 4rem; font-weight: 800; color: #FFE66D; display: inline-block; margin-bottom: 3rem; box-shadow: 0 0 30px rgba(255, 107, 107, 0.4); backdrop-filter: blur(5px); text-transform: lowercase;">
+                    <h2 style="color: white; font-size: 1.5rem; margin-bottom: 0.5rem; opacity: 0.9; text-transform: lowercase;">fuel the rocket with:</h2>
+                    <div id="target-word" class="rocket-target-word" style="background: rgba(255,255,255,0.1); border: 4px solid var(--primary); border-radius: 20px; font-weight: 800; color: #FFE66D; display: inline-block; box-shadow: 0 0 30px rgba(255, 107, 107, 0.4); backdrop-filter: blur(5px); text-transform: lowercase;">
                         ${currentTarget}
                     </div>
 
-                    <div id="options-rack" style="display: flex; gap: 1.5rem; justify-content: center; width: 100%; flex-wrap: wrap; text-transform: lowercase;">
+                    <div id="options-rack" class="rocket-options-rack">
                         <!-- Options injected here -->
                     </div>
                 </div>
 
                 <div id="win-panel" style="display: none; text-align: center; flex-direction: column; align-items: center; z-index: 10;">
-                    <h1 style="font-size: 4rem; color: #FFE66D; text-shadow: 0 0 20px rgba(255, 230, 109, 0.8); margin-bottom: 1rem; text-transform: lowercase;">mission success!</h1>
-                    <p style="font-size: 1.5rem; color: white; margin-bottom: 2rem; text-transform: lowercase;">the rocket made it to the moon!</p>
-                    <button class="btn" id="play-again-btn" style="font-size: 1.5rem; padding: 1rem 3rem; text-transform: lowercase;">play again 🚀</button>
+                    <h1 class="rocket-win-h1" style="color: #FFE66D; text-shadow: 0 0 20px rgba(255, 230, 109, 0.8); margin-bottom: 1rem; text-transform: lowercase;">mission success!</h1>
+                    <p class="rocket-win-p" style="color: white; margin-bottom: 2rem; text-transform: lowercase;">the rocket made it to the moon!</p>
+                    <button class="btn" id="play-again-btn" style="font-size: 1.5rem; padding: 1rem 2rem; text-transform: lowercase;">play again 🚀</button>
                 </div>
 
             </div>
@@ -155,13 +181,10 @@ export function initRocketRace(container, words, onBack) {
         optionsRack.innerHTML = '';
         options.forEach((opt, idx) => {
             const btn = document.createElement('button');
-            btn.className = 'btn';
+            btn.className = 'btn rocket-game-btn';
             btn.style.background = 'rgba(255,255,255,0.9)';
             btn.style.color = '#2F3542';
             btn.style.border = '4px solid #4ECDC4';
-            btn.style.fontSize = '2rem';
-            btn.style.padding = '1rem 2rem';
-            btn.style.minWidth = '150px';
             btn.style.boxShadow = '0 8px 0 #3baba3';
             btn.style.transform = 'translateY(0)';
             btn.style.transition = 'all 0.1s';
@@ -193,10 +216,10 @@ export function initRocketRace(container, words, onBack) {
             progressText.textContent = `${progress}/${MAX_PROGRESS}`;
             
             // Animate rocket up
-            const stepPercent = 10 + (progress * 15); // 10, 25, 40, 55, 70, 85
+            const stepPercent = 5 + (progress * 15); // 5, 20, 35, 50, 65, 80
             rocketEl.style.bottom = `${stepPercent}%`;
-            flameEl.style.fontSize = '5rem';
-            setTimeout(() => flameEl.style.fontSize = '3rem', 1000);
+            flameEl.style.transform = 'scale(1.5)';
+            setTimeout(() => flameEl.style.transform = 'scale(1)', 1000);
 
             setTimeout(() => {
                 renderRound();
@@ -219,7 +242,7 @@ export function initRocketRace(container, words, onBack) {
             // Drop down one progress point
             progress = Math.max(0, progress - 1);
             progressText.textContent = `${progress}/${MAX_PROGRESS}`;
-            const stepPercent = 10 + (progress * 15);
+            const stepPercent = 5 + (progress * 15);
             rocketEl.style.bottom = `${stepPercent}%`;
             
             // Add shake animation to css dynamically if not exists
@@ -281,7 +304,7 @@ export function initRocketRace(container, words, onBack) {
         rocketEl.style.zIndex = '100';
         rocketEl.style.bottom = '50%';
         rocketEl.style.animation = 'crazyFly 3s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite';
-        flameEl.style.fontSize = '8rem';
+        flameEl.style.transform = 'scale(3)';
         flameEl.style.display = 'block';
         
         playSound('crazy');
@@ -298,9 +321,9 @@ export function initRocketRace(container, words, onBack) {
             
             rocketEl.style.animation = 'none';
             rocketEl.style.transition = 'bottom 1s cubic-bezier(0.34, 1.56, 0.64, 1)';
-            rocketEl.style.bottom = '10%';
+            rocketEl.style.bottom = '5%';
             rocketEl.style.zIndex = '1';
-            flameEl.style.fontSize = '3rem';
+            flameEl.style.transform = 'scale(1)';
 
             renderRound();
         };
