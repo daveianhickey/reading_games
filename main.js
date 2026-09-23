@@ -1,4 +1,17 @@
 import './style.css';
+import { renderSelector } from './phonics/selector.js';
+import { getSelectedItems } from './phonics/practice.js';
+import { label } from './phonics/curriculum.js';
+import { getStickers } from './phonics/engine.js';
+
+// Year 1 phonics games (see docs/year1-game-design-guidelines.md). They don't need typed words.
+const YEAR1_GAMES = [
+  { id: 'iron-rig', load: () => import('./games/year1/iron-rig.js'), init: 'initIronRig', icon: '🏋️', name: 'Iron Rig', blurb: 'Match sounds to power up the robot!', color: '#E67E22' },
+  { id: 'rocket-bay', load: () => import('./games/year1/rocket-bay.js'), init: 'initRocketBay', icon: '🚀', name: 'Rocket Bay', blurb: 'Build a rocket and blast off!', color: '#3867d6' },
+  { id: 'bot-snap', load: () => import('./games/year1/bot-snap.js'), init: 'initBotSnap', icon: '🤖', name: 'Bot Snap', blurb: 'SNAP the words to fix the robot!', color: '#20bf6b' },
+  { id: 'orbit', load: () => import('./games/year1/orbit-defense.js'), init: 'initOrbitDefense', icon: '🛡️', name: 'Orbit Defender', blurb: 'Shield the moon base!', color: '#8854d0' },
+  { id: 'mech', load: () => import('./games/year1/mech-builder.js'), init: 'initMechBuilder', icon: '🦾', name: 'Mech Builder', blurb: 'Forge armour for your mech!', color: '#c0392b' }
+];
 
 // App State
 let words = JSON.parse(localStorage.getItem('readingWords')) || [];
@@ -10,7 +23,7 @@ function initApp() {
 }
 
 function renderScreen() {
-  if (words.length < 3) {
+  if (words.length < 3 && localStorage.getItem('skipWordSetup') !== '1') {
     renderParentSetup();
   } else {
     renderGameHub();
@@ -41,6 +54,9 @@ function renderParentSetup() {
         <button class="btn btn-secondary" id="add-word-btn" style="${words.length >= 10 ? 'display: none;' : ''}">+ Add Word</button>
         <button class="btn" id="save-words-btn">Start Playing! 🚀</button>
       </div>
+      <div style="text-align: center; margin-top: 1.5rem;">
+        <button class="btn btn-secondary" id="year1-skip-btn" style="font-size: 1rem;">Year 1 Phonics games →</button>
+      </div>
     </div>
   `;
 
@@ -51,6 +67,10 @@ function setupParentEventListeners() {
    const inputs = document.querySelectorAll('.word-input');
    const addBtn = document.getElementById('add-word-btn');
    const saveBtn = document.getElementById('save-words-btn');
+   document.getElementById('year1-skip-btn').addEventListener('click', () => {
+     localStorage.setItem('skipWordSetup', '1');
+     renderGameHub();
+   });
 
    let visibleCount = Math.max(3, words.length + (words.length < 10 ? 1 : 0));
 
@@ -85,9 +105,10 @@ function setupParentEventListeners() {
 function renderGameHub() {
   appContainer.innerHTML = `
     <h1 style="margin-top: 1rem;" class="title-bounce">Game Hub</h1>
+    ${words.length < 3 ? renderYear1Section() : ''}
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; background: var(--glass-bg); padding: 1rem 2rem; border-radius: 50px; backdrop-filter: blur(10px);">
-        <p style="font-size: 1.2rem; font-weight: 800; margin: 0;">My Words: <span style="color: var(--primary);">${words.join(', ')}</span></p>
-        <button class="btn btn-secondary" id="edit-words-btn" style="padding: 0.5rem 1.5rem; font-size: 1rem; box-shadow: 0 4px 0 #0ABDE3;">Edit</button>
+        <p style="font-size: 1.2rem; font-weight: 800; margin: 0;">My Words: <span style="color: var(--primary);">${words.length ? words.join(', ') : 'none yet'}</span></p>
+        <button class="btn btn-secondary" id="edit-words-btn" style="padding: 0.5rem 1.5rem; font-size: 1rem; box-shadow: 0 4px 0 #0ABDE3;">${words.length ? 'Edit' : 'Add'}</button>
     </div>
 
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
@@ -125,7 +146,11 @@ function renderGameHub() {
       </div>
 
     </div>
+
+    ${words.length >= 3 ? renderYear1Section() : ''}
   `;
+
+  setupYear1Listeners();
 
   document.getElementById('edit-words-btn').addEventListener('click', () => {
     // Clear words internally to force setup render but preserve input values
@@ -150,6 +175,7 @@ function renderGameHub() {
 }
 
 function startBubblePop() {
+    if (words.length < 3) return renderParentSetup();
     import('./games/bubble-pop.js').then(module => {
         module.initBubblePop(appContainer, words, renderGameHub);
     }).catch(err => {
@@ -159,6 +185,7 @@ function startBubblePop() {
 }
 
 function startMemoryMatch() {
+    if (words.length < 3) return renderParentSetup();
     import('./games/memory-match.js').then(module => {
         module.initMemoryMatch(appContainer, words, renderGameHub);
     }).catch(err => {
@@ -168,6 +195,7 @@ function startMemoryMatch() {
 }
 
 function startRocketRace() {
+    if (words.length < 3) return renderParentSetup();
     import('./games/rocket-race.js').then(module => {
         module.initRocketRace(appContainer, words, renderGameHub);
     }).catch(err => {
@@ -177,8 +205,59 @@ function startRocketRace() {
 }
 
 function startSoundSpotter() {
+    if (words.length < 3) return renderParentSetup();
     import('./games/sound-spotter.js').then(module => {
         module.initSoundSpotter(appContainer, words, renderGameHub);
+    }).catch(err => {
+        console.error("Failed to load game", err);
+        alert("Game is still being built!");
+    });
+}
+
+function renderYear1Section() {
+  const chosen = getSelectedItems(words);
+  const stickers = getStickers();
+  return `
+    <section style="margin-top: 3rem;">
+      <h1 class="title-bounce" style="font-size: 2.8rem; margin-bottom: 1rem;">Year 1 Phonics 🚀</h1>
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; background: var(--glass-bg); padding: 1rem 2rem; border-radius: 30px; backdrop-filter: blur(10px);">
+        <p style="font-size: 1.1rem; font-weight: 800; margin: 0; flex: 1;">
+          Practising: <span style="color: var(--primary);">${chosen.length ? [...new Set(chosen.map(label))].join(' · ') : 'each game\'s starter set'}</span>
+        </p>
+        <button class="btn" id="year1-choose-btn" style="padding: 0.6rem 1.5rem; font-size: 1rem;">Choose sounds 🎯</button>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem;">
+        ${YEAR1_GAMES.map((g, i) => `
+          <button class="glass-card year1-card" data-game="${g.id}" style="text-align: center; cursor: pointer; border: none; font-family: inherit; padding: 1.5rem; animation: popIn 0.5s ease-out ${0.1 * i}s both; display: flex; flex-direction: column; align-items: center;">
+            <div style="font-size: 4rem; animation: float 3s ease-in-out infinite ${i * 0.5}s;">${g.icon}</div>
+            <h2 style="font-size: 1.8rem; margin: 0.5rem 0; color: ${g.color};">${g.name}</h2>
+            <p style="font-size: 1.05rem; font-weight: 600; margin: 0;">${g.blurb}</p>
+          </button>
+        `).join('')}
+      </div>
+      ${stickers.length ? `
+        <div class="glass-card" style="margin-top: 1.5rem; padding: 1rem 1.5rem; text-align: center;">
+          <strong style="font-size: 1.1rem;">My stickers:</strong>
+          <span style="font-size: 2rem; letter-spacing: 0.3rem;">${stickers.join('')}</span>
+        </div>` : ''}
+    </section>
+  `;
+}
+
+function setupYear1Listeners() {
+  document.getElementById('year1-choose-btn').addEventListener('click', () => {
+    renderSelector(appContainer, words, renderGameHub);
+    window.scrollTo(0, 0);
+  });
+  document.querySelectorAll('.year1-card').forEach(card => {
+    card.addEventListener('click', () => startYear1Game(YEAR1_GAMES.find(g => g.id === card.dataset.game)));
+  });
+}
+
+function startYear1Game(game) {
+    game.load().then(module => {
+        window.scrollTo(0, 0);
+        module[game.init](appContainer, words, renderGameHub);
     }).catch(err => {
         console.error("Failed to load game", err);
         alert("Game is still being built!");
