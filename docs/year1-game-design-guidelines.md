@@ -27,6 +27,7 @@ word games (Bubble Pop, Memory Match, Rocket Race, Sound Spotter).
 | **Audio-first** | Every grapheme/word tile speaks when touched or flipped (`sayItem`). A 🔊 button always replays the current prompt. |
 | **Zero-failure penalty** | No game-over, no lives, no score loss, no harsh error sounds. A wrong answer gets a gentle “boing” + wiggle and the child simply tries again. |
 | **Short sessions** | Each round needs 3–5 correct interactions, then a 3–5 s reward animation and a big “Again!” button. |
+| **Thinking beats guessing** | Never punish a wrong answer, but make the considered answer pay better than tapping everything: first-try answers get the biggest feedback, and guessing costs a little time. (Added after the learner found Orbit Defender could be won by tapping every option.) |
 | **Errorless scaffolding** | After two misses on the same prompt, or ~9 s of inactivity, the correct answer gently glows. |
 | **One goal on screen** | Minimal text, large touch targets (≥ 64 px), progress pips instead of numbers. |
 | **Accessibility** | Keyboard playable, visible focus rings, `aria-label`s on game objects, `prefers-reduced-motion` respected. |
@@ -100,7 +101,17 @@ collection) plus each game’s own theme code.
   Space) to swing it to the top; the asteroid then hits the shield. Asteroids
   never hit the base.
 - **Micro-feedback:** the asteroid vaporises into star-dust with a punchy zap.
-- **Reward:** 5 asteroids → laser-grid wave clear and a hyper-drive / fireworks finale.
+- **Thinking pays (anti-guessing):**
+  - *First try:* full star-dust blast, a gold pip and a “⭐ First try!” pop, plus
+    “🔥 N in a row!” for streaks.
+  - *Wrong shield:* the asteroid bounces back (still no penalty), but the shield
+    **recharges** for about 1.5 s (ring greys out, taps ignored) before the phrase is
+    replayed. Tapping every option becomes the slow way to win: in testing, a round took
+    about 17 s with careful play and about 45–75 s by tapping everything.
+  - *Found after a guess:* the asteroid still clears but only fizzles, and the pip is silver.
+- **Reward:** 5 asteroids → laser-grid wave clear and a finale. The end card shows ⭐ per
+  first-try hit. **4+ first-try hits** earns the *Super Defender* finale (every effect at
+  once) and a guaranteed sticker; otherwise a random hyper-drive / fireworks / rainbow finale.
 
 ### Game 5 – “Cyber-Lift Mech Builder” (Transformer / Gym / Mech) — `games/year1/mech-builder.js`
 - **Loop:** load the correct weight plate into the hydraulic press to forge armour.

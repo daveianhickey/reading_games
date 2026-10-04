@@ -201,6 +201,36 @@ await test('rocketBay: a wrong pod is dimmed, never penalised', async () => {
     c.querySelector('.y1-back').click();
 });
 
+await test('orbit: first try earns gold; a guess triggers a recharge and only earns silver', async () => {
+    const c = container();
+    practice.setSelection(['ir']);
+    games.orbit(c, [], () => {});
+    const node = text => [...c.querySelectorAll('.orb-node')].find(n => n.textContent === text);
+    const wrongNode = () => [...c.querySelectorAll('.orb-node')].find(n => n.textContent !== 'ir');
+    const pips = () => [...c.querySelectorAll('.y1-pip.on')];
+    await sleep(20);
+
+    node('ir').click();
+    await sleep(550);
+    assert.strictEqual(pips().length, 1);
+    assert.ok(!pips()[0].classList.contains('silver'), 'first try is gold');
+
+    await sleep(1000); // next asteroid
+    wrongNode().click();
+    await sleep(550);
+    assert.ok(c.querySelector('.orb').classList.contains('recharging'), 'shield recharges after a wrong hit');
+    node('ir').click(); // tapping straight away is ignored while recharging
+    await sleep(600);
+    assert.strictEqual(pips().length, 1, 'no progress while recharging');
+    await sleep(600);
+    assert.ok(!c.querySelector('.orb').classList.contains('recharging'));
+    node('ir').click();
+    await sleep(550);
+    assert.strictEqual(pips().length, 2);
+    assert.ok(pips()[1].classList.contains('silver'), 'found after a guess is silver');
+    c.querySelector('.y1-back').click();
+});
+
 await test('botSnap: snapping with nothing matching just wiggles', async () => {
     const c = container();
     games.botSnap(c, [], () => {});

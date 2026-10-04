@@ -252,11 +252,12 @@ export function getStickers() {
 }
 
 // Roughly 1 in 3 rounds unlocks a sticker, guaranteed after 3 dry rounds.
-function maybeUnlockSticker() {
+// `force` guarantees one (used to reward careful play, e.g. Orbit Defender's first-try bonus).
+function maybeUnlockSticker(force = false) {
     const owned = getStickers();
     const missing = STICKERS.filter(s => !owned.includes(s));
     const dry = store(DRY_KEY, 0);
-    if (!missing.length || (Math.random() > 0.35 && dry < 3)) {
+    if (!missing.length || (!force && Math.random() > 0.35 && dry < 3)) {
         save(DRY_KEY, dry + 1);
         return null;
     }
@@ -344,17 +345,18 @@ export function createShell(container, { theme = 'space', title, goal, onBack, o
         },
         onKey: null,
         // End-of-round overlay with "Again" and "Games" buttons, plus the occasional sticker unlock.
-        showReward({ emoji = '🏆', title: rewardTitle = pick(PRAISE), onAgain }) {
+        showReward({ emoji = '🏆', title: rewardTitle = pick(PRAISE), subtitle = '', forceSticker = false, onAgain }) {
             shell.clearHint();
             sfx.fanfare();
             say(rewardTitle);
-            const sticker = maybeUnlockSticker();
+            const sticker = maybeUnlockSticker(forceSticker);
             const overlay = document.createElement('div');
             overlay.className = 'y1-reward';
             overlay.innerHTML = `
                 <div class="y1-reward-card">
                     <div class="y1-reward-emoji">${emoji}</div>
                     <h2>${rewardTitle}</h2>
+                    ${subtitle ? `<div class="y1-reward-sub">${subtitle}</div>` : ''}
                     ${sticker ? `<div class="y1-sticker-unlock">New sticker! <span>${sticker}</span></div>` : ''}
                     <div class="y1-reward-buttons">
                         <button class="btn y1-again">Again! ▶</button>
@@ -419,6 +421,7 @@ function ensureStyles() {
         .y1-pips { display: flex; gap: 8px; }
         .y1-pip { width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,0.25); border: 3px solid rgba(255,255,255,0.6); transition: background 0.2s; }
         .y1-pip.on { background: #FFE66D; border-color: #fff; box-shadow: 0 0 12px #FFE66D; }
+        .y1-pip.on.silver { background: #dfe6e9; border-color: #95a5a6; box-shadow: 0 0 6px rgba(255,255,255,0.5); }
         .y1-prompt { position: relative; z-index: 2; min-height: 3rem; text-align: center; font-weight: 800; font-size: 2rem; }
         .y1-stage { position: relative; flex: 1; min-height: 420px; }
         .y1-practising { position: relative; z-index: 2; text-align: center; font-size: 0.95rem; opacity: 0.75; font-weight: 600; }
@@ -433,6 +436,7 @@ function ensureStyles() {
         .y1-reward-card { background: #fff; color: #2F3542; border-radius: 30px; padding: 2rem 2.5rem; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.4); max-width: 90%; }
         .y1-reward-card h2 { color: #FF6B6B; margin: 0.5rem 0 1rem; }
         .y1-reward-emoji { font-size: 5rem; animation: bounce 1.5s infinite; }
+        .y1-reward-sub { font-size: 1.4rem; font-weight: 800; margin: -0.5rem 0 1rem; }
         .y1-sticker-unlock { font-size: 1.4rem; font-weight: 800; margin-bottom: 1rem; color: #8E44AD; }
         .y1-sticker-unlock span { font-size: 3rem; display: inline-block; animation: float 2s ease-in-out infinite; }
         .y1-reward-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
