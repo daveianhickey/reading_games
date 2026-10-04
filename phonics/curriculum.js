@@ -10,6 +10,8 @@
 //   example  example word (spoken when there is no phrase)
 //   emoji    picture for dual coding
 //   clue     (word) sentence with ___ for the gap, shown as a reading clue
+//   gaps     (gpc) optional: the phrase/example with [ ] round the letters that make the sound,
+//            e.g. '[c]ycle in the [c]ity'. Only needed when automatic gap-finding gets it wrong.
 //   say      optional override for what speech synthesis says
 //   audio    optional path to a recorded clip (played instead of speech synthesis)
 
@@ -54,7 +56,7 @@ export const TERMS = [
                     gpc('i-e', 'time to shine', '✨', { split: true }),
                     gpc('o-e', 'note in an envelope', '✉️', { split: true }),
                     gpc('u-e', 'tune on a flute', '🎵', { split: true }),
-                    gpc('c', 'cycle in the city', '🚲')
+                    gpc('c', 'cycle in the city', '🚲', { gaps: '[c]ycle in the [c]ity' })
                 ]
             },
             {
@@ -78,7 +80,7 @@ export const TERMS = [
                     tracker('or', 'or', 'fork', '🍴'),
                     tracker('ow-growl', 'ow', 'cow', '🐄'),
                     tracker('oi', 'oi', 'coin', '🪙'),
-                    tracker('ear', 'ear', 'ear', '👂'),
+                    tracker('ear', 'ear', 'hear', '👂'),
                     tracker('air', 'air', 'hair', '💇'),
                     tracker('ure', 'ure', 'cure', '🩹'),
                     tracker('er', 'er', 'hammer', '🔨'),
@@ -201,4 +203,21 @@ export function findItem(id, words = []) {
 // Text shown on a tile.
 export function label(item) {
     return item.kind === 'gpc' ? item.grapheme : item.word;
+}
+
+// The prompt text for a GPC, split into plain text and gaps where the sound's letters go.
+// Returns [{ text }, { gap: 'letters' }, ...]. Split digraphs give one gap per letter (c▢k▢).
+export function gapSegments(item) {
+    const marked = item.gaps || autoGaps(item.phrase || item.example || '', item.grapheme);
+    return marked.split(/(\[[^\]]+\])/).filter(Boolean).map(part =>
+        part.startsWith('[') ? { gap: part.slice(1, -1) } : { text: part });
+}
+
+function autoGaps(text, grapheme) {
+    const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (/^[a-z]-e$/.test(grapheme)) {
+        const vowel = grapheme[0];
+        return text.replace(new RegExp(`${esc(vowel)}([^aeiou\\s])e`, 'g'), `[${vowel}]$1[e]`);
+    }
+    return text.replace(new RegExp(esc(grapheme), 'g'), `[${grapheme}]`);
 }

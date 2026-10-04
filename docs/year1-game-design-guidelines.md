@@ -69,8 +69,15 @@ collection) plus each game’s own theme code.
 - **Loop:** tap (or drag) the correct pod to attach rocket parts.
 - **Content (default):** Phase 5 split digraphs (a-e, e-e, i-e, o-e, u-e) and
   Harder to Read & Spell words (house, mouse, water, want, very).
-- **Mechanic:** a phrase prompt (“cake by the lake” + picture) or a spoken word
-  clue; three debris pods drift in space; the child sends the right one to the rocket.
+- **Mechanic:** a spoken phrase or word plus a picture, with the target sound's letters
+  blanked out of the written prompt (“c▢k▢ by the l▢k▢” 🎂, “h▢” 💇 for *hair*). Three
+  debris pods drift in space; the child sends the spelling that fills the gaps to the
+  rocket. All gaps are the same width, so a gap's size never shows how many letters go in.
+  Because the letters are hidden, the child has to choose the spelling for the sound they
+  hear (*air* vs *ir* vs *ar*) instead of matching letters by sight. Word rounds use a
+  sentence clue with a gap (“a ___ with a red door”).
+- **On a correct answer:** the letters drop into the gaps, highlighted, and the word or
+  phrase is spoken again, which links the sound to its spelling.
 - **Micro-feedback:** metallic lock sound; the rocket part snaps in and deploys.
 - **Reward:** 4 parts → 3-2-1 countdown and blast-off to a random destination
   (Moon, Mars, loop-the-loop, asteroid blasting).

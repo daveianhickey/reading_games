@@ -50,6 +50,11 @@ Game module contract: `init<Name>(container, words, onBack)`. The game is regist
    - GPCs: `gpc('grapheme', 'catchphrase', 'emoji')` (add `{ split: true }` for split digraphs
      such as `a-e`). Tracker-style GPCs with no catchphrase use
      `tracker(id, grapheme, exampleWord, emoji)`.
+   - Rocket Bay blanks the sound's letters out of the phrase or example word automatically
+     (`gapSegments`). Check the gaps are right (the curriculum tests list every prompt). Where
+     the letters also appear without making the sound, mark the gaps by hand with
+     `{ gaps: '[c]ycle in the [c]ity' }`. Avoid example words that are only the grapheme
+     itself (e.g. use *hear* for `ear`), or the prompt is just a gap.
    - Words: `word('word', 'emoji', 'clue sentence with ___ for the gap')`.
    - **Item ids must be unique across all terms.** If a grapheme repeats with a different sound, use
      `grapheme-example` (e.g. `oo-book`). If a term re-lists an item from an earlier term,
