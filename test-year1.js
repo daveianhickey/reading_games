@@ -10,7 +10,7 @@ global.localStorage = dom.window.localStorage;
 global.requestAnimationFrame = cb => setTimeout(() => cb(Date.now()), 16);
 global.cancelAnimationFrame = id => clearTimeout(id);
 
-const { TERMS, allItems, findItem, label } = await import('./phonics/curriculum.js');
+const { TERMS, allItems, findItem, label, gapSegments } = await import('./phonics/curriculum.js');
 const practice = await import('./phonics/practice.js');
 const { renderSelector } = await import('./phonics/selector.js');
 const games = {
@@ -52,12 +52,38 @@ await test('curriculum: autumn term 1 has all brief content', () => {
     assert.strictEqual(findItem('a-e').phrase, 'cake by the lake');
 });
 
+await test('curriculum: common exception words list is complete with no duplicates', () => {
+    const given = 'the put of to go into pull his he buses we me be push was her my you they all are ball tall when what said so have were out like some come there little one do children love oh their people Mr Mrs your ask should would could asked'.split(' ');
+    const words = allItems().filter(i => i.kind === 'word').map(i => i.word);
+    given.forEach(w => assert.ok(words.includes(w), `${w} missing`));
+    assert.strictEqual(new Set(words.map(w => w.toLowerCase())).size, words.length);
+    assert.strictEqual(TERMS.find(t => t.id === 'y1-common-exception').sets[0].items.length, 43);
+});
+
 await test('curriculum: every item can be spoken and pictured', () => {
     for (const item of allItems()) {
         assert.ok(item.emoji, `${item.id} needs an emoji`);
         if (item.kind === 'gpc') assert.ok(item.phrase || item.example, `${item.id} needs a phrase or example`);
         else assert.ok(item.clue, `${item.id} needs a clue`);
     }
+});
+
+await test('curriculum: every sound has a gap, and filling the gaps rebuilds the prompt', () => {
+    for (const item of allItems().filter(i => i.kind === 'gpc')) {
+        const segs = gapSegments(item);
+        const gaps = segs.filter(x => x.gap !== undefined);
+        assert.ok(gaps.length, `${item.id} has no gap`);
+        assert.strictEqual(segs.map(x => x.gap ?? x.text).join(''), item.phrase || item.example, item.id);
+        const allowed = item.split ? item.grapheme.split('-') : [item.grapheme];
+        gaps.forEach(g => assert.ok(allowed.includes(g.gap), `${item.id}: unexpected gap "${g.gap}"`));
+    }
+});
+
+await test('curriculum: gaps hide the sound (hair → h▢, cake → c▢k▢, soft c only)', () => {
+    const show = id => gapSegments(findItem(id)).map(x => x.gap !== undefined ? '▢' : x.text).join('');
+    assert.strictEqual(show('air'), 'h▢');
+    assert.strictEqual(show('a-e'), 'c▢k▢ by the l▢k▢');
+    assert.strictEqual(show('c'), '▢ycle in the ▢ity');
 });
 
 await test('practice: no selection falls back to game defaults', () => {
@@ -163,11 +189,15 @@ await test('rocketBay: a wrong pod is dimmed, never penalised', async () => {
     const c = container();
     practice.setSelection(['a-e']);
     games.rocketBay(c, [], () => {});
-    assert.ok(c.querySelector('.y1-prompt').textContent.includes('cake by the lake'));
+    assert.strictEqual(c.querySelector('.y1-prompt').textContent.replace(/\s+/g, ''), '🎂ckbythelk', 'letters for the sound are hidden');
+    assert.strictEqual(c.querySelectorAll('.bay-gap').length, 4);
     const wrong = [...c.querySelectorAll('.bay-pod')].find(p => p.textContent !== 'a-e');
     wrong.click();
     assert.ok(wrong.classList.contains('dim'));
     assert.strictEqual(c.querySelectorAll('.y1-pip.on').length, 0);
+    assert.strictEqual(c.querySelectorAll('.bay-gap.filled').length, 0, 'a wrong answer leaves the gaps empty');
+    [...c.querySelectorAll('.bay-pod')].find(p => p.textContent === 'a-e').click();
+    assert.deepStrictEqual([...c.querySelectorAll('.bay-gap.filled')].map(g => g.textContent), ['a', 'e', 'a', 'e']);
     c.querySelector('.y1-back').click();
 });
 

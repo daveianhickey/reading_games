@@ -1,5 +1,5 @@
 // Game 2: "Rocket Assembly Bay" — send the pod that matches the catchphrase / spoken word to the rocket.
-import { label } from '../../phonics/curriculum.js';
+import { label, gapSegments } from '../../phonics/curriculum.js';
 import { buildPool, pickDistractors, targetSequence, shuffle, recordResult } from '../../phonics/practice.js';
 import { createShell, sayItem, say, sfx, wiggle, burstAt, glow, pick, animate, makeDraggable } from '../../phonics/engine.js';
 
@@ -51,6 +51,11 @@ export function initRocketBay(container, words, onBack) {
             .bay-ground { position: absolute; bottom: -8px; left: -30px; right: -30px; height: 16px; background: #7f8c8d; border-radius: 8px; }
             .bay-prompt { display: inline-flex; align-items: center; gap: 0.6rem; background: rgba(255,255,255,0.15); padding: 0.3rem 1.2rem; border-radius: 40px; }
             .bay-prompt .em { font-size: 2.6rem; }
+            /* Gaps are all the same width so their size never gives away how many letters go in. */
+            .bay-gap { display: inline-block; min-width: 1.6em; height: 1.15em; margin: 0 0.06em; vertical-align: -0.12em; border-radius: 8px;
+                border: 3px dashed #FFE66D; background: rgba(255,230,109,0.12); text-align: center; line-height: 1; }
+            .bay-word { white-space: nowrap; }
+            .bay-gap.filled { min-width: 0; height: auto; vertical-align: baseline; border: none; background: none; color: #FFE66D; padding: 0 0.04em; text-shadow: 0 0 12px rgba(255,230,109,0.8); }
             .bay-count { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 9rem; font-weight: 900; color: #FFE66D; text-shadow: 0 0 30px #F39C12; pointer-events: none; z-index: 20; }
             .bay-dest { position: absolute; top: 5%; right: 10%; font-size: 6rem; opacity: 0; }
         </style>
@@ -81,11 +86,39 @@ export function initRocketBay(container, words, onBack) {
 
     nextTarget();
 
+    // GPC prompts blank out the sound's letters (h▢ for "hair"), so the child chooses the spelling
+    // that makes the sound they hear instead of spotting matching letters.
     function renderPrompt(item) {
         const text = item.kind === 'gpc'
-            ? (item.phrase || item.example)
+            ? gappedHTML(item)
             : (item.clue ? item.clue.replace('___', '<u>&nbsp;?&nbsp;</u>') : 'Listen… 👂');
         shell.prompt.innerHTML = `<span class="bay-prompt"><span class="em">${item.emoji || '🔊'}</span><span>${text}</span></span>`;
+    }
+
+    // Each word is kept on one line so a gap never wraps away from the rest of its word.
+    function gappedHTML(item) {
+        const words = [''];
+        for (const seg of gapSegments(item)) {
+            if (seg.gap !== undefined) {
+                words[words.length - 1] += `<span class="bay-gap" data-fill="${seg.gap}" aria-label="gap"></span>`;
+                continue;
+            }
+            seg.text.split(' ').forEach((part, i) => {
+                if (i > 0) words.push('');
+                words[words.length - 1] += part;
+            });
+        }
+        return words.map(w => `<span class="bay-word">${w}</span>`).join(' ');
+    }
+
+    // On a correct answer the letters drop into the gaps, highlighted, linking sound to spelling.
+    function fillGaps() {
+        shell.prompt.querySelectorAll('.bay-gap').forEach(gap => {
+            gap.textContent = gap.dataset.fill;
+            gap.classList.add('filled');
+            gap.removeAttribute('aria-label');
+            animate(gap, [{ transform: 'translateY(-0.6em) scale(1.4)', opacity: 0 }, { transform: 'translateY(0) scale(1)', opacity: 1 }], { duration: 300, easing: 'ease-out' });
+        });
     }
 
     function nextTarget() {
@@ -125,6 +158,7 @@ export function initRocketBay(container, words, onBack) {
         busy = true;
         shell.clearHint();
         if (misses === 0) recordResult(current.id, true);
+        fillGaps();
         sayItem(item);
         const slot = rocket.querySelector(`[data-part="${step}"]`);
         const from = pod.getBoundingClientRect();
