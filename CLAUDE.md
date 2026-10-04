@@ -20,6 +20,8 @@ Reading games for young children, built with vanilla JS + Vite (no framework).
 - `docs/curriculum/*.md`: curriculum content per school term, as given by the school.
   - `docs/curriculum/year1-autumn-term-1.md`: Autumn 1 revised/new Phase 5 sounds with
     catchphrases, the Phase 2 & 3 GPC tracker, HRSWs and spelling words.
+  - `docs/curriculum/year1-common-exception-words.md`: the full Year 1 common exception
+    words list (words already in Autumn 1 are reused, not duplicated).
 
 ## Year 1 code map
 

@@ -52,6 +52,14 @@ await test('curriculum: autumn term 1 has all brief content', () => {
     assert.strictEqual(findItem('a-e').phrase, 'cake by the lake');
 });
 
+await test('curriculum: common exception words list is complete with no duplicates', () => {
+    const given = 'the put of to go into pull his he buses we me be push was her my you they all are ball tall when what said so have were out like some come there little one do children love oh their people Mr Mrs your ask should would could asked'.split(' ');
+    const words = allItems().filter(i => i.kind === 'word').map(i => i.word);
+    given.forEach(w => assert.ok(words.includes(w), `${w} missing`));
+    assert.strictEqual(new Set(words.map(w => w.toLowerCase())).size, words.length);
+    assert.strictEqual(TERMS.find(t => t.id === 'y1-common-exception').sets[0].items.length, 43);
+});
+
 await test('curriculum: every item can be spoken and pictured', () => {
     for (const item of allItems()) {
         assert.ok(item.emoji, `${item.id} needs an emoji`);

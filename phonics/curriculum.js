@@ -15,7 +15,7 @@
 
 const gpc = (grapheme, phrase, emoji, extra = {}) => ({ id: grapheme, kind: 'gpc', grapheme, phrase, emoji, ...extra });
 const tracker = (id, grapheme, example, emoji) => ({ id, kind: 'gpc', grapheme, example, emoji });
-const word = (w, emoji, clue) => ({ id: `w-${w}`, kind: 'word', word: w, emoji, clue });
+const word = (w, emoji, clue) => ({ id: `w-${w.toLowerCase()}`, kind: 'word', word: w, emoji, clue });
 
 export const TERMS = [
     {
@@ -112,6 +112,63 @@ export const TERMS = [
                     word('pull', '🚪', 'push and ___'),
                     word('is', '☀️', 'it ___ hot'),
                     word('as', '🏎️', 'as fast ___ a car')
+                ]
+            }
+        ]
+    },
+    {
+        id: 'y1-common-exception',
+        title: 'Year 1 · Common exception words',
+        doc: 'docs/curriculum/year1-common-exception-words.md',
+        sets: [
+            {
+                id: 'y1-cew',
+                title: 'Common exception words',
+                subtitle: 'Year 1 list (words already above are not repeated)',
+                items: [
+                    word('his', '🎩', '___ hat is red'),
+                    word('he', '👨', '___ is my dad'),
+                    word('buses', '🚌', 'two red ___'),
+                    word('we', '🧒', '___ can play'),
+                    word('me', '👀', 'look at ___'),
+                    word('be', '😇', 'I will ___ good'),
+                    word('push', '🛒', '___ the trolley'),
+                    word('was', '🎉', 'it ___ fun'),
+                    word('her', '👧', '___ dog is big'),
+                    word('my', '🧸', 'this is ___ teddy'),
+                    word('you', '🫵', 'I can see ___'),
+                    word('they', '👫', '___ go home'),
+                    word('all', '👏', 'we ___ clap'),
+                    word('are', '😊', 'we ___ happy'),
+                    word('ball', '⚽', 'kick the ___'),
+                    word('tall', '🦒', 'a ___ giraffe'),
+                    word('when', '⏰', '___ is lunch?'),
+                    word('what', '❓', '___ is that?'),
+                    word('said', '💬', 'Mum ___ hello'),
+                    word('so', '🥳', 'I am ___ happy'),
+                    word('have', '🐶', 'I ___ a dog'),
+                    word('were', '🛝', 'we ___ at the park'),
+                    word('out', '🌳', 'go ___ to play'),
+                    word('like', '🍦', 'I ___ ice cream'),
+                    word('some', '🍭', '___ sweets for me'),
+                    word('come', '🤗', '___ and play'),
+                    word('there', '👉', 'the cat is over ___'),
+                    word('little', '🐣', 'a ___ chick'),
+                    word('one', '👃', 'I have ___ nose'),
+                    word('do', '🤸', 'what can you ___?'),
+                    word('children', '🏫', 'the ___ play'),
+                    word('love', '❤️', 'I ___ my mum'),
+                    word('oh', '😮', '___ no!'),
+                    word('their', '🏡', '___ house is big'),
+                    word('people', '👥', 'lots of ___'),
+                    word('Mr', '👨‍🏫', '___ Smith'),
+                    word('Mrs', '👩‍🏫', '___ Jones'),
+                    word('your', '🙌', 'wash ___ hands'),
+                    word('ask', '🙋', '___ a question'),
+                    word('should', '🛏️', 'you ___ go to bed'),
+                    word('would', '🧁', '___ you like a cake?'),
+                    word('could', '🤝', '___ you help me?'),
+                    word('asked', '🥤', 'she ___ for a drink')
                 ]
             }
         ]
