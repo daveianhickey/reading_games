@@ -10,7 +10,7 @@ global.localStorage = dom.window.localStorage;
 global.requestAnimationFrame = cb => setTimeout(() => cb(Date.now()), 16);
 global.cancelAnimationFrame = id => clearTimeout(id);
 
-const { TERMS, allItems, findItem, label, gapSegments } = await import('./phonics/curriculum.js');
+const { TERMS, allItems, findItem, label, gapSegments, keyWord } = await import('./phonics/curriculum.js');
 const practice = await import('./phonics/practice.js');
 const { renderSelector } = await import('./phonics/selector.js');
 const { initMemoryMatch } = await import('./games/memory-match.js');
@@ -216,7 +216,7 @@ await test('orbit: first try earns gold; a guess triggers a recharge and only ea
     assert.strictEqual(pips().length, 1);
     assert.ok(!pips()[0].classList.contains('silver'), 'first try is gold');
 
-    await sleep(1000); // next asteroid
+    await sleep(1400); // next asteroid (after the key word is said)
     wrongNode().click();
     await sleep(550);
     assert.ok(c.querySelector('.orb').classList.contains('recharging'), 'shield recharges after a wrong hit');
@@ -230,6 +230,37 @@ await test('orbit: first try earns gold; a guess triggers a recharge and only ea
     assert.strictEqual(pips().length, 2);
     assert.ok(pips()[1].classList.contains('silver'), 'found after a guess is silver');
     c.querySelector('.y1-back').click();
+});
+
+await test('curriculum: keyWord picks the word that carries the sound', () => {
+    assert.strictEqual(keyWord(findItem('ir')), 'shirt');
+    assert.strictEqual(keyWord(findItem('a-e')), 'lake');
+    assert.strictEqual(keyWord(findItem('c')), 'city');
+    assert.strictEqual(keyWord(findItem('air')), 'hair');
+    for (const item of allItems().filter(i => i.kind === 'gpc')) assert.ok(keyWord(item), `${item.id} has a key word`);
+});
+
+await test('orbit: the sound is underlined in the phrase, and a hit says its key word', async () => {
+    const spoken = [];
+    window.speechSynthesis = { cancel() {}, getVoices: () => [], speak: u => spoken.push(u.text) };
+    global.SpeechSynthesisUtterance = class { constructor(text) { this.text = text; } };
+    try {
+        const c = container();
+        practice.setSelection(['ir']);
+        games.orbit(c, [], () => {});
+        await sleep(20);
+        const marks = [...c.querySelectorAll('.orb-sound')].map(el => el.textContent);
+        assert.deepStrictEqual(marks, ['ir', 'ir'], 'both "ir"s in "a quirky shirt" are underlined');
+        assert.strictEqual(c.querySelector('.orb-phrase').textContent.replace(/\s+/g, ''), '👕aquirkyshirt', 'the full phrase is still shown');
+        [...c.querySelectorAll('.orb-node')].find(n => n.textContent === 'ir').click();
+        await sleep(550);
+        assert.strictEqual(spoken[spoken.length - 1], 'shirt', 'the key word is said on a hit');
+        assert.ok(c.querySelector('.orb-sound').classList.contains('lit'));
+        c.querySelector('.y1-back').click();
+    } finally {
+        delete window.speechSynthesis;
+        delete global.SpeechSynthesisUtterance;
+    }
 });
 
 await test('botSnap: snapping with nothing matching just wiggles', async () => {

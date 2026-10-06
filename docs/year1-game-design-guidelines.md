@@ -100,7 +100,14 @@ collection) plus each game’s own theme code.
   catchphrase and picture (“a quirky shirt” 👕). Tap a grapheme (or ←/→ then
   Space) to swing it to the top; the asteroid then hits the shield. Asteroids
   never hit the base.
-- **Micro-feedback:** the asteroid vaporises into star-dust with a punchy zap.
+- **Visual support:** the letters that make the sound are underlined in yellow in the
+  catchphrase (“p<u>ie</u> on my t<u>ie</u>”), matching the yellow ring on the top shield,
+  so the child can match what they see. Added because matching the sound alone was confusing.
+- **Micro-feedback:** the asteroid vaporises into star-dust with a punchy zap. The underlined
+  letters light up and the voice says the **key word** that carries the sound (the last word
+  containing it, usually the rhyme: “shirt!”, “lawn!”, “lake!”). The word is used rather than
+  the bare sound because browser voices can't reliably say isolated phonemes. Recorded
+  sound clips could replace it later.
 - **Thinking pays (anti-guessing):**
   - *First try:* full star-dust blast, a gold pip and a “⭐ First try!” pop, plus
     “🔥 N in a row!” for streaks.

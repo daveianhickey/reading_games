@@ -1,5 +1,5 @@
 // Game 4: "Orbit Defender: GPC Defence" — swing the matching grapheme on the shield ring into the asteroid's path.
-import { label } from '../../phonics/curriculum.js';
+import { label, gapSegments, keyWord } from '../../phonics/curriculum.js';
 import { buildPool, pickDistractors, targetSequence, shuffle, recordResult } from '../../phonics/practice.js';
 import { createShell, sayItem, say, sfx, wiggle, burstAt, glow, pick, animate } from '../../phonics/engine.js';
 
@@ -45,6 +45,9 @@ export function initOrbitDefense(container, words, onBack) {
             .orb-rock { position: absolute; left: 50%; top: 0; width: 22%; aspect-ratio: 1; margin-left: -11%; border-radius: 45% 55% 50% 50%; background: radial-gradient(circle at 30% 30%, #a1887f, #6d4c41 70%);
                 display: flex; align-items: center; justify-content: center; font-size: clamp(2rem, 8vw, 3.2rem); box-shadow: 0 0 20px rgba(255,120,0,0.5); z-index: 3; }
             .orb-phrase { display: inline-flex; gap: 0.6rem; align-items: center; background: rgba(255,255,255,0.15); border-radius: 40px; padding: 0.3rem 1.2rem; }
+            /* The letters that make the sound are underlined in the shield colour, to match against the ring. */
+            .orb-sound { text-decoration: underline; text-decoration-color: #FFE66D; text-decoration-thickness: 0.14em; text-underline-offset: 0.18em; color: #FFE66D; }
+            .orb-sound.lit { text-shadow: 0 0 14px #FFE66D, 0 0 4px #fff; }
             .orb-streak { position: absolute; left: 50%; top: 64%; width: 3px; height: 40px; background: linear-gradient(#fff, transparent); transform-origin: top center; pointer-events: none; }
             .orb.rainbow .orb-ring { border-style: solid; border-color: #ff6b6b #ffe66d #4ecdc4 #a29bfe; animation: spinRing 0.6s linear 4; }
             @keyframes spinRing { to { transform: translate(-50%, -50%) rotate(360deg); } }
@@ -135,7 +138,8 @@ export function initOrbitDefense(container, words, onBack) {
         applyRing();
 
         rock.textContent = current.emoji || '☄️';
-        shell.prompt.innerHTML = `<span class="orb-phrase"><span style="font-size:2.4rem">${current.emoji || '☄️'}</span>${current.phrase || current.example}</span>`;
+        const phrase = gapSegments(current).map(seg => seg.gap !== undefined ? `<span class="orb-sound">${seg.gap}</span>` : seg.text).join('');
+        shell.prompt.innerHTML = `<span class="orb-phrase"><span style="font-size:2.4rem">${current.emoji || '☄️'}</span><span>${phrase}</span></span>`;
         await animate(rock, [{ transform: 'translateY(-120%) rotate(-30deg)', opacity: 0 }, { transform: 'translateY(0) rotate(0deg)', opacity: 1 }], { duration: 900, easing: 'ease-out' });
         if (!shell.alive) return;
         sayItem(current);
@@ -172,7 +176,13 @@ export function initOrbitDefense(container, words, onBack) {
                 popText('Got it!', true);
             }
             animate(rock, [{ transform: 'translateY(80%) scale(1)', opacity: 1 }, { transform: 'translateY(80%) scale(1.8)', opacity: 0 }], 250);
-            await shell.wait(misses === 0 ? 900 : 700);
+            // Say the key word that carries the sound ("shirt!") while its underlined letters light up.
+            say(keyWord(current));
+            shell.prompt.querySelectorAll('.orb-sound').forEach(el => {
+                el.classList.add('lit');
+                animate(el, [{ transform: 'scale(1)' }, { transform: 'scale(1.3)' }, { transform: 'scale(1)' }], { duration: 500, fill: 'none' });
+            });
+            await shell.wait(1200);
             if (cleared >= ASTEROIDS) finale(); else nextAsteroid();
         } else {
             if (misses === 0) recordResult(current.id, false);
