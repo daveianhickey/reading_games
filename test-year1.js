@@ -13,6 +13,7 @@ global.cancelAnimationFrame = id => clearTimeout(id);
 const { TERMS, allItems, findItem, label, gapSegments } = await import('./phonics/curriculum.js');
 const practice = await import('./phonics/practice.js');
 const { renderSelector } = await import('./phonics/selector.js');
+const { initMemoryMatch } = await import('./games/memory-match.js');
 const games = {
     ironRig: (await import('./games/year1/iron-rig.js')).initIronRig,
     rocketBay: (await import('./games/year1/rocket-bay.js')).initRocketBay,
@@ -240,6 +241,21 @@ await test('botSnap: snapping with nothing matching just wiggles', async () => {
     c.querySelector('#snap-btn').click();
     if (scan !== targetWord) assert.strictEqual(c.querySelectorAll('.y1-pip.on').length, 0);
     c.querySelector('.y1-back').click();
+});
+
+await test('memoryMatch: one sound card per round, revealed when matched with its written word', async () => {
+    const c = container();
+    initMemoryMatch(c, ['said', 'was', 'the', 'you', 'they', 'come'], () => {});
+    const cards = [...c.querySelectorAll('.memory-card')];
+    const sound = cards.filter(card => card.dataset.sound);
+    assert.strictEqual(sound.length, 1, 'exactly one sound card');
+    const word = sound[0].dataset.word;
+    assert.ok(!sound[0].querySelector('.card-front').textContent.includes(word), 'sound card hides its word');
+    assert.ok(sound[0].querySelector('.card-front').textContent.includes('🔊'));
+    sound[0].click();
+    cards.find(card => card !== sound[0] && card.dataset.word === word).click();
+    assert.ok(sound[0].classList.contains('matched'));
+    assert.strictEqual(sound[0].querySelector('.card-front').textContent, word, 'word shown once matched');
 });
 
 console.log(failures ? `\n${failures} test(s) failed` : '\nAll Year 1 tests passed');
