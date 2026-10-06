@@ -188,7 +188,9 @@ export function burstAt(el, opts) {
 }
 
 // Pointer drag with tap fallback. `onSelect` fires on tap/click/Enter, or when dropped on `dropTarget`.
-export function makeDraggable(el, { dropTarget, onSelect }) {
+// Pass `onTap` to make a pointer tap do something else (e.g. say the word) so that only a drag chooses;
+// keyboard activation (Enter/Space) still calls `onSelect` so the game stays keyboard-playable.
+export function makeDraggable(el, { dropTarget, onSelect, onTap }) {
     let start = null;
     let dragging = false;
     let justDragged = false;
@@ -228,9 +230,9 @@ export function makeDraggable(el, { dropTarget, onSelect }) {
         el.classList.remove('y1-dragging');
         el.style.translate = '';
     });
-    el.addEventListener('click', () => {
+    el.addEventListener('click', e => {
         if (justDragged) { justDragged = false; return; }
-        onSelect();
+        if (onTap && e.detail > 0) onTap(); else onSelect();
     });
 }
 

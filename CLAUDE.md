@@ -39,7 +39,7 @@ Reading games for young children, built with vanilla JS + Vite (no framework).
 | `games/year1/rocket-bay.js` | Game 2 – catchphrase → pod, split digraphs + HRSWs. |
 | `games/year1/bot-snap.js` | Game 3 – conveyor snap, spelling words. |
 | `games/year1/orbit-defense.js` | Game 4 – shield ring, Phase 5 alternative spellings. |
-| `games/year1/mech-builder.js` | Game 5 – press the right word plate, mixed tricky words. |
+| `games/year1/mech-builder.js` | Game 5 – drag the word plate into the gap in a sentence, mixed tricky words. |
 | `test-year1.js` | jsdom tests (`npm test`). |
 
 Game module contract: `init<Name>(container, words, onBack)`. The game is registered in

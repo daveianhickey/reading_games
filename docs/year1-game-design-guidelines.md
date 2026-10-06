@@ -114,12 +114,21 @@ collection) plus each game’s own theme code.
   once) and a guaranteed sticker; otherwise a random hyper-drive / fireworks / rainbow finale.
 
 ### Game 5 – “Cyber-Lift Mech Builder” (Transformer / Gym / Mech) — `games/year1/mech-builder.js`
-- **Loop:** load the correct weight plate into the hydraulic press to forge armour.
+- **Loop:** drag the word plate that completes the sentence into its gap to forge mech armour.
 - **Content (default):** mixed tricky words (HRSWs + spelling words).
-- **Mechanic:** the app speaks a word and shows a clue (picture or sentence with a
-  gap). Three weight plates drop down; tap or drag the right one onto the press.
-- **Micro-feedback:** the press slams, the screen shakes and a glowing armour piece
-  snaps onto the mech avatar.
+- **Mechanic:** the sentence is the centrepiece: a big “mould” with a picture and a
+  fixed-size gap (“go ▢ school” 🏫). Three weight plates drop down below it.
+  - **Dragging a plate into the sentence chooses it.** Tapping a plate only says its word,
+    so he can check words by ear but has to read the sentence to choose.
+  - **The sentence is not read out automatically,** otherwise he could answer by listening.
+    🔊 reads it with “blank” in the gap. The idle hint ladder reads it first, then glows the
+    right plate. Words with no clue sentence (e.g. typed words) are spoken.
+  - **A wrong word is tried in the sentence** (“go house school”) for a moment, so he can
+    see it doesn't fit, then boings back dimmed. No penalty.
+  - Added after the learner was found to answer without reading the word or the sentence.
+    It replaced the hydraulic press as the drop target.
+- **Micro-feedback:** the word slams into the gap (slam, shake, sparks), the completed sentence
+  is read aloud, and an armour piece rises from it and snaps onto the mech.
 - **Reward:** 3 plates complete the mech (random colour scheme); it stands, roars,
   flexes and is parked in the garage gallery.
 

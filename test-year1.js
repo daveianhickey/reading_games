@@ -288,5 +288,47 @@ await test('memoryMatch: every card says its word when flipped, and again on a m
     }
 });
 
+await test('mech: tap hears a word, a wrong word shows in the sentence, the right one completes it', async () => {
+    const spoken = [];
+    window.speechSynthesis = { cancel() {}, getVoices: () => [], speak: u => spoken.push(u.text) };
+    global.SpeechSynthesisUtterance = class { constructor(text) { this.text = text; } };
+    try {
+        const c = container();
+        practice.setSelection(['w-want']);
+        games.mech(c, [], () => {});
+        const gap = c.querySelector('#forge-gap');
+        assert.strictEqual(c.querySelector('.forge-sentence').textContent, 'I  a cake', 'sentence shown with an empty gap');
+        assert.strictEqual(spoken.length, 0, 'the sentence is not read out automatically');
+        const plates = [...c.querySelectorAll('.forge-plate')];
+        const right = plates.find(p => p.textContent === 'want');
+        const wrong = plates.find(p => p.textContent !== 'want');
+
+        right.dispatchEvent(new window.MouseEvent('click', { bubbles: true, detail: 1 })); // a finger tap
+        assert.deepStrictEqual(spoken, ['want'], 'tapping a plate says its word');
+        assert.strictEqual(c.querySelectorAll('.y1-pip.on').length, 0, 'tapping does not choose');
+
+        c.querySelector('.y1-speak').click();
+        assert.strictEqual(spoken[spoken.length - 1], 'I blank a cake', '🔊 reads the sentence with "blank"');
+
+        wrong.click(); // keyboard-style activation chooses
+        assert.ok(gap.classList.contains('wrong'));
+        assert.strictEqual(gap.textContent, wrong.textContent, 'the wrong word is tried in the sentence');
+        await sleep(850);
+        assert.strictEqual(gap.textContent, '');
+        assert.ok(wrong.classList.contains('dim'));
+
+        right.click();
+        assert.strictEqual(gap.textContent, 'want');
+        assert.ok(gap.classList.contains('filled'));
+        assert.strictEqual(spoken[spoken.length - 1], 'I want a cake', 'the completed sentence is read aloud');
+        await sleep(800);
+        assert.strictEqual(c.querySelectorAll('.y1-pip.on').length, 1);
+        c.querySelector('.y1-back').click();
+    } finally {
+        delete window.speechSynthesis;
+        delete global.SpeechSynthesisUtterance;
+    }
+});
+
 console.log(failures ? `\n${failures} test(s) failed` : '\nAll Year 1 tests passed');
 process.exit(failures ? 1 : 0);
