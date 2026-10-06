@@ -298,7 +298,8 @@ await test('mech: tap hears a word, a wrong word shows in the sentence, the righ
         games.mech(c, [], () => {});
         const gap = c.querySelector('#forge-gap');
         assert.strictEqual(c.querySelector('.forge-sentence').textContent, 'I  a cake', 'sentence shown with an empty gap');
-        assert.strictEqual(spoken.length, 0, 'the sentence is not read out automatically');
+        assert.deepStrictEqual(spoken, ['I blank a cake'], 'a new sentence is read aloud with "blank" in the gap');
+        spoken.length = 0;
         const plates = [...c.querySelectorAll('.forge-plate')];
         const right = plates.find(p => p.textContent === 'want');
         const wrong = plates.find(p => p.textContent !== 'want');
