@@ -5,6 +5,7 @@ import { createShell, sayItem, say, sfx, wiggle, burstAt, glow, pick, animate } 
 
 const ASTEROIDS = 5;
 const NODES = 3;
+const SUPER_AT = 4;
 const DEFAULTS = ['ay', 'ou', 'ie', 'ea', 'oy', 'ir', 'aw', 'ph', 'ew'];
 const FINALES = [
     { id: 'hyper', text: 'Hyper-drive!' },
@@ -21,6 +22,8 @@ export function initOrbitDefense(container, words, onBack) {
     let ringAngle = 0;
     let busy = true;
     let misses = 0;
+    let firstTries = 0;
+    let streak = 0;
 
     const shell = createShell(container, {
         theme: 'space', title: 'Orbit Defender', goal: ASTEROIDS, onBack,
@@ -45,6 +48,12 @@ export function initOrbitDefense(container, words, onBack) {
             .orb-streak { position: absolute; left: 50%; top: 64%; width: 3px; height: 40px; background: linear-gradient(#fff, transparent); transform-origin: top center; pointer-events: none; }
             .orb.rainbow .orb-ring { border-style: solid; border-color: #ff6b6b #ffe66d #4ecdc4 #a29bfe; animation: spinRing 0.6s linear 4; }
             @keyframes spinRing { to { transform: translate(-50%, -50%) rotate(360deg); } }
+            /* After a wrong hit the shield recharges briefly: guessing every option is slower than thinking. */
+            .orb.recharging .orb-ring { opacity: 0.35; filter: grayscale(1); transition: opacity 0.2s; }
+            .orb.recharging .orb-node { cursor: wait; }
+            .orb-pop { position: absolute; left: 50%; top: 8%; transform: translateX(-50%); z-index: 5; pointer-events: none; white-space: nowrap;
+                font-weight: 900; font-size: clamp(1.4rem, 5vw, 2rem); color: #FFE66D; text-shadow: 0 0 14px rgba(255,230,109,0.9), 0 2px 0 #000; }
+            .orb-pop.plain { color: #dfe6e9; text-shadow: 0 2px 0 #000; font-size: clamp(1.1rem, 4vw, 1.5rem); }
         </style>
         <div class="orb" id="orb">
             <div class="orb-lane"></div>
@@ -143,21 +152,39 @@ export function initOrbitDefense(container, words, onBack) {
         await animate(rock, impact, { duration: 300, easing: 'ease-in' });
         if (!shell.alive) return;
         if (label(hit) === label(current)) {
-            if (misses === 0) recordResult(current.id, true);
-            sfx.zap();
-            burstAt(rock, { colors: ['#FFE66D', '#fff', '#9be7ff', '#F39C12'], count: 26, spread: 180 });
-            burstAt(rock, { chars: ['✨', '⭐'], count: 8, spread: 120 });
-            animate(rock, [{ transform: 'translateY(80%) scale(1)', opacity: 1 }, { transform: 'translateY(80%) scale(1.8)', opacity: 0 }], 250);
             cleared++;
             shell.setProgress(cleared);
-            await shell.wait(700);
+            if (misses === 0) {
+                // First try: the full blast, a gold pip and a streak — thinking it through pays best.
+                recordResult(current.id, true);
+                firstTries++;
+                streak++;
+                sfx.zap();
+                burstAt(rock, { colors: ['#FFE66D', '#fff', '#9be7ff', '#F39C12'], count: 26, spread: 180 });
+                burstAt(rock, { chars: ['✨', '⭐'], count: 8, spread: 120 });
+                popText(streak >= 2 ? `⭐ First try! 🔥 ${streak} in a row!` : '⭐ First try!');
+            } else {
+                // Found after a guess: the asteroid still goes, but only fizzles, and the pip is silver.
+                streak = 0;
+                shell.pips[cleared - 1].classList.add('silver');
+                sfx.zap();
+                burstAt(rock, { colors: ['#95a5a6', '#bdc3c7'], count: 8, spread: 70, size: 7 });
+                popText('Got it!', true);
+            }
+            animate(rock, [{ transform: 'translateY(80%) scale(1)', opacity: 1 }, { transform: 'translateY(80%) scale(1.8)', opacity: 0 }], 250);
+            await shell.wait(misses === 0 ? 900 : 700);
             if (cleared >= ASTEROIDS) finale(); else nextAsteroid();
         } else {
             if (misses === 0) recordResult(current.id, false);
             misses++;
+            streak = 0;
             sfx.boing();
             wiggle(nodes[topIndex()]);
+            orb.classList.add('recharging');
             await animate(rock, [{ transform: 'translateY(80%)' }, { transform: 'translateY(-10%)' }, { transform: 'translateY(0)' }], { duration: 500, easing: 'ease-out' });
+            await shell.wait(1000);
+            if (!shell.alive) return;
+            orb.classList.remove('recharging');
             busy = false;
             sayItem(current);
             if (misses >= 2) glow(nodes[nodeItems.indexOf(current)]);
@@ -165,9 +192,21 @@ export function initOrbitDefense(container, words, onBack) {
         }
     }
 
+    function popText(text, plain = false) {
+        const el = document.createElement('div');
+        el.className = `orb-pop${plain ? ' plain' : ''}`;
+        el.textContent = text;
+        orb.appendChild(el);
+        animate(el, [{ transform: 'translate(-50%, 20px) scale(0.6)', opacity: 0 }, { transform: 'translate(-50%, 0) scale(1.1)', opacity: 1, offset: 0.25 },
+            { transform: 'translate(-50%, -10px) scale(1)', opacity: 1, offset: 0.75 }, { transform: 'translate(-50%, -30px)', opacity: 0 }], { duration: 1100 }).then(() => el.remove());
+        shell.later(() => el.remove(), 1300);
+    }
+
     async function finale() {
         busy = true;
-        const f = pick(FINALES);
+        // Four or more first-try hits earns the super finale (every effect) and a guaranteed sticker.
+        const superRound = firstTries >= SUPER_AT;
+        const f = superRound ? { id: 'super', text: 'Super Defender!' } : pick(FINALES);
         shell.prompt.textContent = `${f.text} 🌟`;
         say(`Wave cleared! ${f.text}`);
         sfx.powerUp();
@@ -181,16 +220,18 @@ export function initOrbitDefense(container, words, onBack) {
             animate(beam, [{ transform: `rotate(${i * 30}deg) scaleY(0)`, opacity: 1 }, { transform: `rotate(${i * 30 + 60}deg) scaleY(1)`, opacity: 0 }], { duration: 900, delay: i * 40 });
         }
         await shell.wait(900);
-        if (f.id === 'rainbow') {
+        if (f.id === 'rainbow' || f.id === 'super') {
             orb.classList.add('rainbow');
             sfx.fanfare();
-        } else if (f.id === 'fireworks') {
+        }
+        if (f.id === 'fireworks' || f.id === 'super') {
             for (let i = 0; i < 6; i++) shell.later(() => {
                 const r = orb.getBoundingClientRect();
                 burstAt({ getBoundingClientRect: () => ({ left: r.left + Math.random() * r.width, top: r.top + Math.random() * r.height * 0.6, width: 0, height: 0 }) }, { count: 24, spread: 120 });
                 sfx.spark();
             }, i * 280);
-        } else {
+        }
+        if (f.id === 'hyper' || f.id === 'super') {
             sfx.whoosh();
             for (let i = 0; i < 40; i++) {
                 const s = document.createElement('div');
@@ -201,6 +242,12 @@ export function initOrbitDefense(container, words, onBack) {
             }
         }
         await shell.wait(2000);
-        shell.showReward({ emoji: '🛡️', title: f.text, onAgain: () => initOrbitDefense(container, words, onBack) });
+        shell.showReward({
+            emoji: superRound ? '🏅' : '🛡️',
+            title: f.text,
+            subtitle: `${'⭐'.repeat(firstTries)}${'☆'.repeat(ASTEROIDS - firstTries)}<br><small>${firstTries} first-try hit${firstTries === 1 ? '' : 's'}${superRound ? '' : ` · get ${SUPER_AT} for a Super finale!`}</small>`,
+            forceSticker: superRound,
+            onAgain: () => initOrbitDefense(container, words, onBack)
+        });
     }
 }
