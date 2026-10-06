@@ -256,6 +256,36 @@ await test('memoryMatch: one sound card per round, revealed when matched with it
     cards.find(card => card !== sound[0] && card.dataset.word === word).click();
     assert.ok(sound[0].classList.contains('matched'));
     assert.strictEqual(sound[0].querySelector('.card-front').textContent, word, 'word shown once matched');
+    await sleep(700); // let the delayed "say it again" finish before the next test
+});
+
+await test('memoryMatch: every card says its word when flipped, and again on a match', async () => {
+    const spoken = [];
+    window.speechSynthesis = { cancel() {}, getVoices: () => [], speak: u => spoken.push(u.text) };
+    global.SpeechSynthesisUtterance = class { constructor(text) { this.text = text; } };
+    try {
+        const c = container();
+        initMemoryMatch(c, ['said', 'was', 'the', 'you', 'they', 'come'], () => {});
+        const cards = [...c.querySelectorAll('.memory-card')];
+        const first = cards.find(card => !card.dataset.sound);
+        first.click();
+        assert.deepStrictEqual(spoken, [first.dataset.word], 'flip speaks the word');
+        cards.find(card => card !== first && card.dataset.word === first.dataset.word).click();
+        await sleep(700);
+        assert.deepStrictEqual(spoken, [first.dataset.word, first.dataset.word, first.dataset.word], 'second flip and the match both speak');
+        // Flipping the next card straight after a match must not be talked over by the repeat.
+        spoken.length = 0;
+        const a = cards.find(card => !card.classList.contains('matched') && card.dataset.word !== first.dataset.word);
+        const b = cards.find(card => card !== a && card.dataset.word === a.dataset.word);
+        a.click(); b.click();
+        const next = cards.find(card => !card.classList.contains('matched'));
+        next.click();
+        await sleep(700);
+        assert.strictEqual(spoken[spoken.length - 1], next.dataset.word, 'the new card is the last word heard');
+    } finally {
+        delete window.speechSynthesis;
+        delete global.SpeechSynthesisUtterance;
+    }
 });
 
 console.log(failures ? `\n${failures} test(s) failed` : '\nAll Year 1 tests passed');

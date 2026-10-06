@@ -7,7 +7,8 @@ Reading games for young children, built with vanilla JS + Vite (no framework).
 
 1. **Word games** (`games/*.js`: Bubble Pop, Memory Match, Rocket Race, Sound Spotter).
    A grown-up types 3–10 words (stored in `localStorage.readingWords`); these games use those words.
-   Memory Match turns one card per round into a 🔊 sound card (says its word, shows no text),
+   Memory Match says each card's word as it flips (and again on a match), and turns one card
+   per round into a 🔊 sound card (says its word, shows no text),
    so matching it needs actual reading rather than shape-matching. It's a favourite, so keep
    changes to it small.
 2. **Year 1 phonics games** (`games/year1/*.js`) for a Year 1 learner (age 5–6) with ADHD.

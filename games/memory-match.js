@@ -5,6 +5,7 @@ export function initMemoryMatch(container, words, onBack) {
     let flippedCards = [];
     let matchedPairs = 0;
     let lockBoard = false;
+    let repeatTimer = null;
 
     // Generate pairs for the grid
     let gameWords = [...words];
@@ -126,7 +127,10 @@ export function initMemoryMatch(container, words, onBack) {
         this.style.transform = 'rotateY(180deg)';
         this.style.webkitTransform = 'rotateY(180deg)';
         
-        if (this.dataset.sound) say(this.dataset.word);
+        // Every card says its word as it flips, linking what he sees to how it sounds.
+        // A newly flipped card always wins over a pending "say it again" from the last match.
+        clearTimeout(repeatTimer);
+        say(this.dataset.word);
 
         flippedCards.push(this);
 
@@ -140,11 +144,11 @@ export function initMemoryMatch(container, words, onBack) {
 
         if (isMatch) {
             const soundCard = flippedCards.find(card => card.dataset.sound);
-            if (soundCard) {
-                // Found it by reading: show the word on the sound card and say it once more.
-                soundCard.querySelector('.card-front').textContent = soundCard.dataset.word;
-                setTimeout(() => say(soundCard.dataset.word), 600);
-            }
+            // Found it by reading: the sound card shows its word.
+            if (soundCard) soundCard.querySelector('.card-front').textContent = soundCard.dataset.word;
+            // Say the matched word once more.
+            const matchedWord = flippedCards[0].dataset.word;
+            repeatTimer = setTimeout(() => say(matchedWord), 600);
             disableCards();
             updateScore(20);
             matchedPairs++;
