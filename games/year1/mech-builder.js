@@ -36,34 +36,40 @@ export function initMechBuilder(container, words, onBack) {
     const shell = createShell(container, {
         theme: 'forge', title: 'Mech Builder', goal: PIECES, onBack,
         practising: pool, usingDefaults,
-        onSpeak: () => current && sayItem(current, { withClue: true })
+        onSpeak: () => current && readSentence(current)
     });
 
     shell.stage.innerHTML = `
         <style>
             .forge { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; height: 100%; }
-            .forge-top { display: flex; align-items: flex-end; justify-content: center; gap: clamp(1rem, 5vw, 3rem); width: 100%; }
-            .forge-mech { width: clamp(140px, 30vw, 210px); transform-origin: bottom center; transform: scale(0.9) translateY(12px); transition: transform 0.6s cubic-bezier(.3,1.6,.5,1); }
+            /* The sentence is the mould: big, central, and the place the word plate is dragged to. */
+            .forge-mould { width: 100%; max-width: 760px; box-sizing: border-box; padding: 1rem 1.2rem; border-radius: 22px;
+                background: linear-gradient(#636e72, #2d3436); border: 6px solid #4b5559; box-shadow: inset 0 0 24px rgba(0,0,0,0.6), 0 8px 0 #111;
+                display: flex; align-items: center; justify-content: center; gap: 0.8rem; flex-wrap: wrap; transition: box-shadow 0.2s; }
+            .forge-mould.ready { box-shadow: inset 0 0 24px rgba(0,0,0,0.6), 0 8px 0 #111, 0 0 0 4px #FFE66D; }
+            .forge-mould .em { font-size: clamp(2.4rem, 8vw, 3.4rem); }
+            .forge-sentence { font-size: clamp(1.9rem, 6.5vw, 3rem); font-weight: 800; line-height: 1.5; text-align: center; color: #fff; }
+            .forge-gap { display: inline-block; width: 3.4em; height: 1.35em; white-space: nowrap; overflow: visible; padding: 0 0.15em; margin: 0 0.1em; border-radius: 14px; border: 4px dashed #FFE66D;
+                background: rgba(255,230,109,0.12); text-align: center; line-height: 1.35; vertical-align: middle; box-sizing: content-box; }
+            .forge-gap.filled { border-style: solid; color: #FFE66D; background: rgba(243,156,18,0.25); text-shadow: 0 0 14px rgba(255,230,109,0.9); }
+            .forge-gap.wrong { border-style: solid; border-color: #e17055; color: #fab1a0; background: rgba(225,112,85,0.2); }
+            .forge-row { display: flex; align-items: flex-end; justify-content: center; width: 100%; flex: 1; min-height: 0; }
+            .forge-mech { width: min(clamp(120px, 26vw, 190px), 21vh); transform-origin: bottom center; transform: scale(0.9) translateY(12px); transition: transform 0.6s cubic-bezier(.3,1.6,.5,1); }
             .forge-mech svg { width: 100%; overflow: visible; }
             .forge-mech.standing { transform: scale(1.05); }
             .forge-mech .ghost { fill: rgba(255,255,255,0.06); stroke: #FFE66D; stroke-width: 3; stroke-dasharray: 7 5; }
             .forge-mech .armor { transform-box: fill-box; transform-origin: center; }
-            .forge-press { position: relative; width: clamp(150px, 32vw, 220px); height: 250px; }
-            .forge-frame { position: absolute; inset: 0 8px 30px; border: 10px solid #555; border-bottom: none; border-radius: 12px 12px 0 0; }
-            .forge-ram { position: absolute; left: 22%; right: 22%; top: 10px; height: 70px; background: linear-gradient(#95a5a6, #636e72); border-radius: 6px; border-bottom: 10px solid #2d3436; z-index: 2; }
-            .forge-ram::before { content: ''; position: absolute; left: 40%; right: 40%; top: -10px; height: 12px; background: #7f8c8d; }
-            .forge-anvil { position: absolute; left: 12%; right: 12%; bottom: 0; height: 60px; background: linear-gradient(#636e72, #2d3436); border-radius: 10px 10px 4px 4px; }
-            .forge-glow { position: absolute; left: 50%; bottom: 62px; transform: translateX(-50%); font-size: 3rem; opacity: 0; filter: drop-shadow(0 0 14px #F39C12); }
+            .forge-piece { position: fixed; z-index: 60; font-size: 3rem; pointer-events: none; filter: drop-shadow(0 0 14px #F39C12); transform: translate(-50%, -50%); }
             .forge-plates { display: flex; gap: clamp(0.6rem, 3vw, 1.5rem); justify-content: center; flex-wrap: wrap; }
-            .forge-plate { width: clamp(100px, 26vw, 140px); aspect-ratio: 1; border-radius: 50%; border: 8px solid #2d3436; background: radial-gradient(circle, #636e72 0 18%, #2d3436 19% 24%, #4b5559 25%);
+            .forge-plate { width: clamp(96px, 25vw, 136px); aspect-ratio: 1; border-radius: 50%; border: 8px solid #2d3436; background: radial-gradient(circle, #636e72 0 18%, #2d3436 19% 24%, #4b5559 25%);
                 color: #fff; font-family: inherit; font-size: clamp(1.6rem, 5vw, 2.3rem); font-weight: 800; cursor: grab; box-shadow: 0 8px 0 #111; text-shadow: 0 2px 4px #000; }
             .forge-plate.dim { opacity: 0.4; }
-            .forge-clue { display: inline-flex; gap: 0.6rem; align-items: center; background: rgba(255,255,255,0.15); border-radius: 40px; padding: 0.3rem 1.2rem; }
             .forge-roar { position: absolute; top: -10px; left: 55%; background: #fff; color: #e74c3c; font-weight: 900; font-size: 2rem; padding: 0.3rem 0.8rem; border-radius: 20px; opacity: 0; }
             .forge-garage { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; align-items: center; }
         </style>
         <div class="forge" id="forge">
-            <div class="forge-top">
+            <div class="forge-mould" id="forge-mould" aria-label="Sentence"></div>
+            <div class="forge-row">
                 <div class="forge-mech" id="forge-mech" style="position: relative;" aria-label="Your mech">
                     <div class="forge-roar" id="forge-roar">ROAR!</div>
                     <svg viewBox="0 0 200 280" aria-hidden="true">
@@ -78,30 +84,32 @@ export function initMechBuilder(container, words, onBack) {
                         <rect class="armor ghost" data-part="2" x="140" y="88" width="46" height="34" rx="12"/>
                     </svg>
                 </div>
-                <div class="forge-press" id="forge-press" aria-label="Hydraulic press">
-                    <div class="forge-frame"></div>
-                    <div class="forge-ram" id="forge-ram"></div>
-                    <div class="forge-glow" id="forge-glow"></div>
-                    <div class="forge-anvil"></div>
-                </div>
             </div>
             <div class="forge-plates" id="forge-plates"></div>
         </div>`;
 
     const mech = shell.stage.querySelector('#forge-mech');
-    const press = shell.stage.querySelector('#forge-press');
-    const ram = shell.stage.querySelector('#forge-ram');
-    const glowEl = shell.stage.querySelector('#forge-glow');
+    const mould = shell.stage.querySelector('#forge-mould');
     const platesEl = shell.stage.querySelector('#forge-plates');
 
     nextWord();
 
+    // The sentence isn't read out automatically, so he reads it himself. 🔊 reads it with "blank" in the gap.
+    // Words with no clue sentence (e.g. the learner's own typed words) are just a gap, so those are spoken.
+    function readSentence(item) {
+        if (item.clue) say(item.clue.replace('___', 'blank'));
+        else sayItem(item);
+    }
+
     function nextWord() {
         current = targets[step];
         misses = 0;
-        const clue = current.clue ? current.clue.replace('___', '<u>&nbsp;?&nbsp;</u>') : 'Listen… 👂';
-        shell.prompt.innerHTML = `<span class="forge-clue"><span style="font-size:2.4rem">${current.emoji || '🔊'}</span>${clue}</span>`;
-        sayItem(current, { withClue: true });
+        const parts = (current.clue || '___').split('___');
+        mould.innerHTML = `<span class="em" aria-hidden="true">${current.emoji || '🔊'}</span>
+            <span class="forge-sentence">${parts[0]}<span class="forge-gap" id="forge-gap" aria-label="gap"></span>${parts[1] || ''}</span>`;
+        mould.classList.remove('ready');
+        shell.prompt.textContent = 'Drag the word that fits 👆';
+        if (!current.clue) sayItem(current);
         platesEl.innerHTML = '';
         const options = shuffle([current, ...pickDistractors(current, pool, 2, words)]);
         options.forEach((item, i) => {
@@ -110,12 +118,37 @@ export function initMechBuilder(container, words, onBack) {
             plate.textContent = label(item);
             plate.setAttribute('aria-label', `Weight plate ${label(item)}`);
             platesEl.appendChild(plate);
-            makeDraggable(plate, { dropTarget: press, onSelect: () => choose(plate, item) });
+            // Tapping a plate says its word; dragging it into the sentence chooses it.
+            makeDraggable(plate, {
+                dropTarget: mould,
+                onSelect: () => choose(plate, item),
+                onTap: () => { sayItem(item); animate(plate, [{ transform: 'translateY(0)' }, { transform: 'translateY(-14px)' }, { transform: 'translateY(0)' }], { duration: 300, fill: 'none' }); }
+            });
+            plate.addEventListener('pointerdown', () => mould.classList.add('ready'));
+            plate.addEventListener('pointerup', () => mould.classList.remove('ready'));
             // Plates drop down from above with a thud.
             animate(plate, [{ transform: 'translateY(-200px)', opacity: 0 }, { transform: 'translateY(0)', opacity: 1, offset: 0.7 }, { transform: 'translateY(-12px)', offset: 0.85 }, { transform: 'translateY(0)' }], { duration: 600, delay: i * 120, easing: 'ease-in', fill: 'none' });
         });
         busy = false;
-        shell.setHint(() => glow(plateFor(current)));
+        // Hint ladder: first read the sentence aloud, then glow the right plate.
+        let hints = 0;
+        const hint = () => {
+            hints++;
+            if (hints === 1) { readSentence(current); shell.setHint(hint); } else glow(plateFor(current));
+        };
+        shell.setHint(hint);
+    }
+
+    // Put a word in the gap, shrinking long words so the gap (and the sentence) keeps its size.
+    function setGapWord(gap, text) {
+        gap.textContent = text;
+        gap.style.fontSize = text.length > 4 ? `${(4 / text.length).toFixed(2)}em` : '';
+        gap.style.width = gap.style.height = gap.style.lineHeight = '';
+        if (text.length > 4) {
+            const k = text.length / 4;
+            gap.style.width = `${(3.4 * k).toFixed(2)}em`;
+            gap.style.height = gap.style.lineHeight = `${(1.35 * k).toFixed(2)}em`;
+        }
     }
 
     function plateFor(item) {
@@ -124,51 +157,61 @@ export function initMechBuilder(container, words, onBack) {
 
     async function choose(plate, item) {
         if (busy || plate.classList.contains('dim')) return;
+        const gap = mould.querySelector('#forge-gap');
         if (label(item) !== label(current)) {
+            // Show the wrong word in the sentence for a moment so it can be read and heard not to fit.
+            busy = true;
             sfx.boing();
+            setGapWord(gap, label(item));
+            gap.classList.add('wrong');
+            wiggle(gap);
             wiggle(plate);
             plate.classList.add('dim');
-            sayItem(item);
             if (misses === 0) recordResult(current.id, false);
             misses++;
+            await shell.wait(800);
+            if (!shell.alive) return;
+            setGapWord(gap, '');
+            gap.classList.remove('wrong');
+            busy = false;
             if (misses >= 2) glow(plateFor(current));
             return;
         }
         busy = true;
         shell.clearHint();
         if (misses === 0) recordResult(current.id, true);
-        sayItem(item);
 
-        // Load the plate onto the press.
-        const from = plate.getBoundingClientRect();
-        const to = press.getBoundingClientRect();
-        await animate(plate, [
-            { transform: 'translate(0,0) scale(1)' },
-            { transform: `translate(${to.left + to.width / 2 - from.left - from.width / 2}px, ${to.bottom - 70 - from.top - from.height / 2}px) scale(0.6)` }
-        ], { duration: 450, easing: 'ease-in-out' });
-        if (!shell.alive) return;
+        // The plate drops into the gap and the sentence is forged: slam, shake, sparks.
         plate.style.visibility = 'hidden';
-
-        // Slam!
-        await animate(ram, [{ transform: 'translateY(0)' }, { transform: 'translateY(95px)' }], { duration: 160, easing: 'ease-in' });
+        setGapWord(gap, label(current));
+        gap.removeAttribute('aria-label');
+        gap.classList.add('filled');
         sfx.slam();
+        animate(gap, [{ transform: 'scale(1.6)' }, { transform: 'scale(1)' }], { duration: 250, easing: 'ease-in', fill: 'none' });
         animate(shell.root, [{ transform: 'translate(0,0)' }, { transform: 'translate(-8px,5px)' }, { transform: 'translate(7px,-4px)' }, { transform: 'translate(-4px,3px)' }, { transform: 'translate(0,0)' }], { duration: 300, fill: 'none' });
-        burstAt(press, { colors: ['#F39C12', '#FFE66D', '#fff'], count: 20 });
-        glowEl.textContent = ['🪖', '🛡️', '⚙️'][step];
-        glowEl.style.opacity = '1';
-        await animate(ram, [{ transform: 'translateY(95px)' }, { transform: 'translateY(0)' }], { duration: 400, easing: 'ease-out' });
-        if (!shell.alive) return;
+        burstAt(gap, { colors: ['#F39C12', '#FFE66D', '#fff'], count: 20 });
+        // Now read the whole sentence aloud, with the word in place.
+        const sentence = current.clue ? current.clue.replace('___', label(current)) : label(current);
+        say(sentence);
 
-        // Armour piece flies onto the mech.
+        // An armour piece pops out of the gap and flies onto the mech.
         const part = mech.querySelector(`[data-part="${step}"]`);
-        const g = glowEl.getBoundingClientRect();
+        const g = gap.getBoundingClientRect();
         const p = part.getBoundingClientRect();
-        await animate(glowEl, [
-            { transform: 'translateX(-50%)', opacity: 1 },
-            { transform: `translate(calc(-50% + ${p.left + p.width / 2 - g.left - g.width / 2}px), ${p.top + p.height / 2 - g.top - g.height / 2}px) scale(0.5)`, opacity: 0.2 }
-        ], { duration: 500, easing: 'ease-in', fill: 'none' });
+        const piece = document.createElement('div');
+        piece.className = 'forge-piece';
+        piece.textContent = ['🪖', '🛡️', '⚙️'][step];
+        piece.style.left = `${g.left + g.width / 2}px`;
+        piece.style.top = `${g.top + g.height / 2}px`;
+        document.body.appendChild(piece);
+        piece.style.opacity = '0';
+        await animate(piece, [
+            { transform: 'translate(-50%, -110%) scale(0.4)', opacity: 0 },
+            { transform: 'translate(-50%, -170%) scale(1.2)', opacity: 1, offset: 0.3 },
+            { transform: `translate(calc(-50% + ${p.left + p.width / 2 - g.left - g.width / 2}px), calc(-50% + ${p.top + p.height / 2 - g.top - g.height / 2}px)) scale(0.5)`, opacity: 0.3 }
+        ], { duration: 750, delay: 350, easing: 'ease-in' });
+        piece.remove();
         if (!shell.alive) return;
-        glowEl.style.opacity = '0';
         sfx.lock();
         mech.querySelectorAll(`[data-part="${step}"]`).forEach(el => {
             el.classList.remove('ghost');
@@ -182,12 +225,14 @@ export function initMechBuilder(container, words, onBack) {
         shell.prompt.textContent = `${PIECE_NAMES[step]}! 🔧`;
         step++;
         shell.setProgress(step);
-        await shell.wait(900);
+        // Leave time for the sentence to be heard before the next one appears.
+        await shell.wait(Math.min(1800, 500 + sentence.length * 55));
         if (step < PIECES) nextWord(); else complete();
     }
 
     async function complete() {
         platesEl.innerHTML = '';
+        mould.style.display = 'none';
         mech.classList.add('standing');
         sfx.powerUp();
         await shell.wait(700);
