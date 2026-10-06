@@ -1,8 +1,11 @@
+import { say } from '../phonics/engine.js';
+
 export function initMemoryMatch(container, words, onBack) {
     let score = 0;
     let flippedCards = [];
     let matchedPairs = 0;
     let lockBoard = false;
+    let repeatTimer = null;
 
     // Generate pairs for the grid
     let gameWords = [...words];
@@ -20,6 +23,11 @@ export function initMemoryMatch(container, words, onBack) {
     
     // Shuffle
     cards.sort(() => Math.random() - 0.5);
+
+    // One card per round is a sound card: it shows 🔊 and says its word when flipped.
+    // Matching it means reading the written cards to find the one that says that word.
+    const soundIndex = Math.floor(Math.random() * cards.length);
+    const soundFace = `<span style="display: flex; flex-direction: column; align-items: center; line-height: 1.1;"><span style="font-size: 2.6rem;">🔊</span><span style="font-size: 1rem; color: #8E44AD;">listen</span></span>`;
 
     container.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding: 0.5rem; background: var(--glass-bg); border-radius: 50px; backdrop-filter: blur(10px);">
@@ -42,7 +50,7 @@ export function initMemoryMatch(container, words, onBack) {
                 margin: 0 auto;
             ">
                 ${cards.map((word, index) => `
-                    <div class="memory-card" data-word="${word}" style="
+                    <div class="memory-card" data-word="${word}"${index === soundIndex ? ' data-sound="1"' : ''} style="
                         width: 100%; 
                         aspect-ratio: 1/1; 
                         position: relative; 
@@ -71,7 +79,7 @@ export function initMemoryMatch(container, words, onBack) {
                             -webkit-transform: rotateY(180deg);
                             box-shadow: var(--shadow-sm);
                         ">
-                            ${word}
+                            ${index === soundIndex ? soundFace : word}
                         </div>
                         <!-- Back (Visible side initially) -->
                         <div class="card-back" style="
@@ -119,6 +127,11 @@ export function initMemoryMatch(container, words, onBack) {
         this.style.transform = 'rotateY(180deg)';
         this.style.webkitTransform = 'rotateY(180deg)';
         
+        // Every card says its word as it flips, linking what he sees to how it sounds.
+        // A newly flipped card always wins over a pending "say it again" from the last match.
+        clearTimeout(repeatTimer);
+        say(this.dataset.word);
+
         flippedCards.push(this);
 
         if (flippedCards.length === 2) {
@@ -130,6 +143,12 @@ export function initMemoryMatch(container, words, onBack) {
         let isMatch = flippedCards[0].dataset.word === flippedCards[1].dataset.word;
 
         if (isMatch) {
+            const soundCard = flippedCards.find(card => card.dataset.sound);
+            // Found it by reading: the sound card shows its word.
+            if (soundCard) soundCard.querySelector('.card-front').textContent = soundCard.dataset.word;
+            // Say the matched word once more.
+            const matchedWord = flippedCards[0].dataset.word;
+            repeatTimer = setTimeout(() => say(matchedWord), 600);
             disableCards();
             updateScore(20);
             matchedPairs++;
