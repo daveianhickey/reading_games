@@ -213,6 +213,25 @@ export function gapSegments(item) {
         part.startsWith('[') ? { gap: part.slice(1, -1) } : { text: part });
 }
 
+// The word in a GPC's phrase that best carries its sound: the last word containing it,
+// usually the rhyme anchor ("a quirky shirt" → "shirt", "cake by the lake" → "lake").
+export function keyWord(item) {
+    const words = [{ text: '', hasGap: false }];
+    for (const seg of gapSegments(item)) {
+        if (seg.gap !== undefined) {
+            words[words.length - 1].text += seg.gap;
+            words[words.length - 1].hasGap = true;
+            continue;
+        }
+        seg.text.split(' ').forEach((part, i) => {
+            if (i > 0) words.push({ text: '', hasGap: false });
+            words[words.length - 1].text += part;
+        });
+    }
+    const withSound = words.filter(w => w.hasGap);
+    return (withSound[withSound.length - 1] || words[0]).text.replace(/[^\w'-]/g, '');
+}
+
 function autoGaps(text, grapheme) {
     const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     if (/^[a-z]-e$/.test(grapheme)) {
