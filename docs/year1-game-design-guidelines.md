@@ -120,9 +120,11 @@ collection) plus each game’s own theme code.
   fixed-size gap (“go ▢ school” 🏫). Three weight plates drop down below it.
   - **Dragging a plate into the sentence chooses it.** Tapping a plate only says its word,
     so he can check words by ear but has to read the sentence to choose.
-  - **The sentence is not read out automatically,** otherwise he could answer by listening.
-    🔊 reads it with “blank” in the gap. The idle hint ladder reads it first, then glows the
-    right plate. Words with no clue sentence (e.g. typed words) are spoken.
+  - **Each new sentence is read aloud with “blank” in the gap** (“go *blank* school”), so he
+    hears it while looking at the words and can make sense of it quickly. He still has to
+    read the plates to find the missing word. 🔊 repeats it. The idle hint ladder re-reads
+    it first, then glows the right plate. Words with no clue sentence (e.g. typed words)
+    are spoken.
   - **A wrong word is tried in the sentence** (“go house school”) for a moment, so he can
     see it doesn't fit, then boings back dimmed. No penalty.
   - Added after the learner was found to answer without reading the word or the sentence.

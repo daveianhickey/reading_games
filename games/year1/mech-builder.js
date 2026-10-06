@@ -94,7 +94,8 @@ export function initMechBuilder(container, words, onBack) {
 
     nextWord();
 
-    // The sentence isn't read out automatically, so he reads it himself. 🔊 reads it with "blank" in the gap.
+    // Each new sentence is read aloud with "blank" in the gap, so he hears it while looking at the
+    // words but still has to read the plates to find the missing one. 🔊 repeats it.
     // Words with no clue sentence (e.g. the learner's own typed words) are just a gap, so those are spoken.
     function readSentence(item) {
         if (item.clue) say(item.clue.replace('___', 'blank'));
@@ -109,7 +110,8 @@ export function initMechBuilder(container, words, onBack) {
             <span class="forge-sentence">${parts[0]}<span class="forge-gap" id="forge-gap" aria-label="gap"></span>${parts[1] || ''}</span>`;
         mould.classList.remove('ready');
         shell.prompt.textContent = 'Drag the word that fits 👆';
-        if (!current.clue) sayItem(current);
+        readSentence(current);
+        animate(mould.querySelector('#forge-gap'), [{ transform: 'scale(1)' }, { transform: 'scale(1.12)' }, { transform: 'scale(1)' }], { duration: 500, delay: 250, fill: 'none' });
         platesEl.innerHTML = '';
         const options = shuffle([current, ...pickDistractors(current, pool, 2, words)]);
         options.forEach((item, i) => {
@@ -226,7 +228,7 @@ export function initMechBuilder(container, words, onBack) {
         step++;
         shell.setProgress(step);
         // Leave time for the sentence to be heard before the next one appears.
-        await shell.wait(Math.min(1800, 500 + sentence.length * 55));
+        await shell.wait(Math.min(2600, 700 + sentence.length * 75));
         if (step < PIECES) nextWord(); else complete();
     }
 
