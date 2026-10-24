@@ -119,6 +119,31 @@ export const TERMS = [
         ]
     },
     {
+        id: 'y1-oa',
+        title: "Year 1 · 'oa' Read and Write",
+        doc: 'docs/curriculum/year1-oa-read-and-write.md',
+        sets: [
+            {
+                id: 'y1-oa-words',
+                title: "'oa' words",
+                subtitle: 'Read and write (goat, boat, coat…)',
+                items: [
+                    word('goat', '🐐', 'the ___ eats grass'),
+                    word('boat', '⛵', 'sail the ___'),
+                    word('coat', '🧥', 'zip up your ___'),
+                    word('road', '🛣️', 'cross the ___'),
+                    word('soap', '🧼', 'wash with ___'),
+                    word('loaf', '🍞', 'a ___ of bread'),
+                    word('toad', '🐸', 'a ___ by the pond'),
+                    word('coal', '🪨', 'a lump of ___'),
+                    word('goal', '🥅', 'kick it in the ___'),
+                    word('foam', '🫧', 'a bath full of ___'),
+                    word('moat', '🏰', 'a ___ round the castle')
+                ]
+            }
+        ]
+    },
+    {
         id: 'y1-common-exception',
         title: 'Year 1 · Common exception words',
         doc: 'docs/curriculum/year1-common-exception-words.md',

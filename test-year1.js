@@ -19,8 +19,10 @@ const games = {
     rocketBay: (await import('./games/year1/rocket-bay.js')).initRocketBay,
     botSnap: (await import('./games/year1/bot-snap.js')).initBotSnap,
     orbit: (await import('./games/year1/orbit-defense.js')).initOrbitDefense,
-    mech: (await import('./games/year1/mech-builder.js')).initMechBuilder
+    mech: (await import('./games/year1/mech-builder.js')).initMechBuilder,
+    goatBoat: (await import('./games/year1/goat-boat.js')).initGoatBoat
 };
+const { wordTiles } = await import('./games/year1/goat-boat.js');
 
 let failures = 0;
 async function test(name, fn) {
@@ -51,6 +53,13 @@ await test('curriculum: autumn term 1 has all brief content', () => {
     assert.strictEqual(count('y1a1-hrsw'), 5);
     assert.strictEqual(count('y1a1-spelling'), 10);
     assert.strictEqual(findItem('a-e').phrase, 'cake by the lake');
+});
+
+await test("curriculum: 'oa' read and write sheet has all 11 words, each with the sound", () => {
+    const items = TERMS.find(t => t.id === 'y1-oa').sets.find(s => s.id === 'y1-oa-words').items;
+    assert.deepStrictEqual(items.map(i => i.word), ['goat', 'boat', 'coat', 'road', 'soap', 'loaf', 'toad', 'coal', 'goal', 'foam', 'moat']);
+    items.forEach(i => assert.ok(i.word.includes('oa') && i.clue.includes('___'), i.id));
+    assert.strictEqual(new Set(items.map(i => i.emoji)).size, items.length, 'every picture is different');
 });
 
 await test('curriculum: common exception words list is complete with no duplicates', () => {
@@ -355,6 +364,74 @@ await test('mech: tap hears a word, a wrong word shows in the sentence, the righ
         assert.strictEqual(spoken[spoken.length - 1], 'I want a cake', 'the completed sentence is read aloud');
         await sleep(800);
         assert.strictEqual(c.querySelectorAll('.y1-pip.on').length, 1);
+        c.querySelector('.y1-back').click();
+    } finally {
+        delete window.speechSynthesis;
+        delete global.SpeechSynthesisUtterance;
+    }
+});
+
+await test('goatBoat: oa stays one tile', () => {
+    assert.deepStrictEqual(wordTiles('goat'), ['g', 'oa', 't']);
+    assert.deepStrictEqual(wordTiles('toast'), ['t', 'oa', 's', 't']);
+});
+
+await test('goatBoat: read round never says the word; a wrong picture is named and dimmed; the right one sails on', async () => {
+    const spoken = [];
+    window.speechSynthesis = { cancel() {}, getVoices: () => [], speak: u => spoken.push(u.text) };
+    global.SpeechSynthesisUtterance = class { constructor(text) { this.text = text; } };
+    try {
+        const c = container();
+        games.goatBoat(c, [], () => {});
+        const target = c.querySelector('.gb-sign').textContent;
+        assert.ok(target.includes('oa'), 'starter set is the oa words');
+        assert.strictEqual(c.querySelector('.gb-sign .gb-oa').textContent, 'oa', 'the sound is marked');
+        assert.ok(!spoken.includes(target), 'the word to read is not spoken');
+        const pics = [...c.querySelectorAll('.gb-pic')];
+        assert.strictEqual(pics.length, 3);
+        assert.strictEqual(new Set(pics.map(p => p.textContent)).size, 3, 'three different pictures');
+        const wrong = pics.find(p => p.dataset.word !== target);
+        wrong.click();
+        assert.ok(wrong.classList.contains('dim'));
+        assert.strictEqual(spoken[spoken.length - 1], wrong.dataset.word, 'the wrong picture says its own name');
+        assert.strictEqual(c.querySelectorAll('.y1-pip.on').length, 0);
+        pics.find(p => p.dataset.word === target).click();
+        assert.strictEqual(spoken[spoken.length - 1], target, 'read it again to check');
+        assert.strictEqual(c.querySelectorAll('.y1-pip.on').length, 1);
+        assert.ok(c.querySelector('.y1-pip.on').classList.contains('silver'), 'found after a miss is silver');
+        assert.deepStrictEqual({ ...practice.getProgress()[`w-${target}`], last: 0 }, { correct: 0, tries: 1, last: 0 });
+        c.querySelector('.y1-back').click();
+    } finally {
+        delete window.speechSynthesis;
+        delete global.SpeechSynthesisUtterance;
+    }
+});
+
+await test('goatBoat: write round has oa in place; letters go in order, a wrong letter just wiggles', async () => {
+    const spoken = [];
+    window.speechSynthesis = { cancel() {}, getVoices: () => [], speak: u => spoken.push(u.text) };
+    global.SpeechSynthesisUtterance = class { constructor(text) { this.text = text; } };
+    try {
+        const c = container();
+        games.goatBoat(c, [], () => {});
+        const first = c.querySelector('.gb-sign').textContent;
+        c.querySelector(`.gb-pic[data-word="${first}"]`).click();
+        assert.ok(!c.querySelector('.y1-pip.on').classList.contains('silver'), 'first try is gold');
+        await sleep(2100); // boat sails, next round
+        const slots = () => [...c.querySelectorAll('.gb-slot')];
+        const target = spoken[spoken.length - 1];
+        assert.notStrictEqual(target, first, 'a new word');
+        assert.deepStrictEqual(slots().map(s => s.textContent), ['', 'oa', ''], 'oa is already in place');
+        assert.strictEqual(c.querySelector('.gb-picture').textContent, findItem(`w-${target}`).emoji, 'the picture is shown and spoken');
+        const tile = t => [...c.querySelectorAll('.gb-tile')].find(x => x.textContent === t && x.style.visibility !== 'hidden');
+        assert.strictEqual(c.querySelectorAll('.gb-tile').length, 4, 'two letters needed plus two decoys');
+        tile(target[3]).click(); // last letter first: not yet
+        assert.strictEqual(slots()[0].textContent, '');
+        tile(target[0]).click();
+        tile(target[3]).click();
+        assert.deepStrictEqual(slots().map(s => s.textContent), [target[0], 'oa', target[3]]);
+        assert.strictEqual(c.querySelectorAll('.y1-pip.on').length, 2);
+        assert.ok(c.querySelectorAll('.y1-pip.on')[1].classList.contains('silver'));
         c.querySelector('.y1-back').click();
     } finally {
         delete window.speechSynthesis;

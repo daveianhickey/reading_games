@@ -54,7 +54,7 @@ In this repo: the educational layer is `phonics/curriculum.js` (content) and
 `phonics/engine.js` (shell, speech, sound effects, hints, rewards, sticker
 collection) plus each game’s own theme code.
 
-## The Five Games
+## The Six Games
 
 ### Game 1 – “Iron Rig: Power-Up!” (Transformers / Gym) — `games/year1/iron-rig.js`
 - **Loop:** match grapheme cards to power up a robot before it lifts a barbell.
@@ -140,6 +140,28 @@ collection) plus each game’s own theme code.
   is read aloud, and an armour piece rises from it and snaps onto the mech.
 - **Reward:** 3 plates complete the mech (random colour scheme); it stands, roars,
   flexes and is parked in the garage gallery.
+
+### Game 6 – “Goat Boat” ('oa' Read and Write / Water / Castle) — `games/year1/goat-boat.js`
+- **Loop:** read and write 'oa' words to sail a goat in a boat across the moat to a castle.
+- **Content (default):** the 11 words from the school's 'oa' Read and Write worksheet
+  (goat, boat, coat, road, soap, loaf, toad, coal, goal, foam, moat, set `y1-oa-words`). The
+  game accepts any chosen word containing `oa` that has a picture.
+- **Mechanic:** rounds take turns between the two halves of the worksheet:
+  - *Read it:* the word is shown on a sign, with `oa` underlined, and is **not** spoken. Three
+    pictures appear, all of them 'oa' words, so the child has to read the first and last letters
+    (goat / coat / moat) rather than just spot the `oa`.
+  - *Write it:* the picture is shown and its word is spoken (tap the picture to hear it again).
+    `oa` is already in its place (g▢ **oa** ▢). The child taps the missing letters in order.
+    There are two decoy letters, and the next gap to fill is highlighted.
+- **Read it again to check:** every finished word glows and is said aloud, as the worksheet asks.
+- **Zero penalty / thinking pays:** a wrong picture says its own name (“toad”) and dims. A wrong
+  letter wiggles back and is not dimmed, because it may belong in a later gap. First-try answers
+  earn a gold pip, answers found after a miss earn silver, and the errorless glow comes after
+  2 misses or 9 s idle.
+- **Micro-feedback:** lock clunk and sparkles, then the boat sails to the next buoy.
+- **Reward:** 4 words → the boat reaches the castle with a random finale (drawbridge, castle
+  fireworks, a toad hops aboard, big splash). A ⭐ for each first-try word; all 4 first try
+  guarantees a sticker.
 
 ## Adding a new game
 1. Put it in `games/year1/<name>.js` exporting `init<Name>(container, words, onBack)`.

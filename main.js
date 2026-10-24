@@ -10,7 +10,8 @@ const YEAR1_GAMES = [
   { id: 'rocket-bay', load: () => import('./games/year1/rocket-bay.js'), init: 'initRocketBay', icon: '🚀', name: 'Rocket Bay', blurb: 'Build a rocket and blast off!', color: '#3867d6' },
   { id: 'bot-snap', load: () => import('./games/year1/bot-snap.js'), init: 'initBotSnap', icon: '🤖', name: 'Bot Snap', blurb: 'SNAP the words to fix the robot!', color: '#20bf6b' },
   { id: 'orbit', load: () => import('./games/year1/orbit-defense.js'), init: 'initOrbitDefense', icon: '🛡️', name: 'Orbit Defender', blurb: 'Shield the moon base!', color: '#8854d0' },
-  { id: 'mech', load: () => import('./games/year1/mech-builder.js'), init: 'initMechBuilder', icon: '🦾', name: 'Mech Builder', blurb: 'Forge armour for your mech!', color: '#c0392b' }
+  { id: 'mech', load: () => import('./games/year1/mech-builder.js'), init: 'initMechBuilder', icon: '🦾', name: 'Mech Builder', blurb: 'Forge armour for your mech!', color: '#c0392b' },
+  { id: 'goat-boat', load: () => import('./games/year1/goat-boat.js'), init: 'initGoatBoat', icon: '🐐', name: 'Goat Boat', blurb: "Read and write 'oa' words to sail to the castle!", color: '#0984e3' }
 ];
 
 // App State
