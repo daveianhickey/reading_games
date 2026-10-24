@@ -411,6 +411,7 @@ function ensureStyles() {
         .y1-theme-gym { background: linear-gradient(180deg, #34495e 0%, #2c3e50 70%, #1c2833 100%); color: #fff; }
         .y1-theme-cyber { background: linear-gradient(160deg, #0f2027 0%, #203a43 50%, #2c5364 100%); color: #fff; }
         .y1-theme-forge { background: linear-gradient(180deg, #2d1b12 0%, #4a2c1a 60%, #1e120b 100%); color: #fff; }
+        .y1-theme-moat { background: linear-gradient(180deg, #74b9ff 0%, #a29bfe 45%, #2d6a4f 100%); color: #fff; }
         .y1-theme-space::before { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0.7;
             background-image: radial-gradient(2px 2px at 20% 30%, #fff, transparent), radial-gradient(2px 2px at 70% 20%, #fff, transparent),
             radial-gradient(1px 1px at 40% 70%, #fff, transparent), radial-gradient(2px 2px at 85% 60%, #fff, transparent),

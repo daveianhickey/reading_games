@@ -20,10 +20,12 @@ Reading games for young children, built with vanilla JS + Vite (no framework).
 
 - `docs/year1-game-design-guidelines.md`: developmental psychology basis and the rules every
   Year 1 game must follow (audio-first, zero-failure penalty, 3–5 interaction rounds,
-  10–15 s feedback loops, variable rewards, errorless hints), plus the spec for all 5 games.
+  10–15 s feedback loops, variable rewards, errorless hints), plus the spec for all 6 games.
 - `docs/curriculum/*.md`: curriculum content per school term, as given by the school.
   - `docs/curriculum/year1-autumn-term-1.md`: Autumn 1 revised/new Phase 5 sounds with
     catchphrases, the Phase 2 & 3 GPC tracker, HRSWs and spelling words.
+  - `docs/curriculum/year1-oa-read-and-write.md`: the 'oa' Read and Write homework sheet
+    (goat, boat, coat…), broken down into read / write / check tasks.
   - `docs/curriculum/year1-common-exception-words.md`: the full Year 1 common exception
     words list (words already in Autumn 1 are reused, not duplicated).
 
@@ -40,6 +42,7 @@ Reading games for young children, built with vanilla JS + Vite (no framework).
 | `games/year1/bot-snap.js` | Game 3 – conveyor snap, spelling words. |
 | `games/year1/orbit-defense.js` | Game 4 – shield ring, Phase 5 alternative spellings. |
 | `games/year1/mech-builder.js` | Game 5 – drag the word plate into the gap in a sentence, mixed tricky words. |
+| `games/year1/goat-boat.js` | Game 6 – 'oa' words: read the word → tap its picture, then write it (picture → letters round `oa`). |
 | `test-year1.js` | jsdom tests (`npm test`). |
 
 Game module contract: `init<Name>(container, words, onBack)`. The game is registered in
