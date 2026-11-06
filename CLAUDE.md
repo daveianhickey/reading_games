@@ -28,6 +28,11 @@ Reading games for young children, built with vanilla JS + Vite (no framework).
     (goat, boat, coat…), broken down into read / write / check tasks.
   - `docs/curriculum/year1-common-exception-words.md`: the full Year 1 common exception
     words list (words already in Autumn 1 are reused, not duplicated).
+  - `docs/curriculum/year1-focus-weak-spots.md`: the learner's weak spots from school
+    (15 GPCs + 48 HRSWs not yet secure), mapped to existing curriculum item ids.
+- `docs/robot-stories-design.md`: design for **Robot Stories** (planned third strand):
+  short illustrated, page-turning robot stories written around the focus weak spots.
+  Story rules, cast, art direction, reader UX, technical plan and open questions.
 
 ## Year 1 code map
 
