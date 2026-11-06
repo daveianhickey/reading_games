@@ -3,7 +3,7 @@
 Reading games for young children, built with vanilla JS + Vite (no framework).
 `index.html` → `main.js` (hub + parent word setup) → games loaded on demand.
 
-## Two families of games
+## Three strands
 
 1. **Word games** (`games/*.js`: Bubble Pop, Memory Match, Rocket Race, Sound Spotter).
    A grown-up types 3–10 words (stored in `localStorage.readingWords`); these games use those words.
@@ -15,6 +15,9 @@ Reading games for young children, built with vanilla JS + Vite (no framework).
    They practise GPCs (grapheme–phoneme correspondences) and tricky words from the school
    curriculum, and don't need typed words. The learner picks what to practise on the
    **“What shall we practise?”** screen (`phonics/selector.js`, opened from the hub).
+3. **Robot Stories** (`stories/`): short illustrated page-turning robot stories (Torch, Clunk,
+   Hook, Airlift vs Darkstorm) written around the learner's school weak spots. Opened from the
+   “Robot Stories” banner in the Year 1 section of the hub.
 
 ## Year 1 reference documents (read before changing Year 1 games)
 
@@ -30,7 +33,7 @@ Reading games for young children, built with vanilla JS + Vite (no framework).
     words list (words already in Autumn 1 are reused, not duplicated).
   - `docs/curriculum/year1-focus-weak-spots.md`: the learner's weak spots from school
     (15 GPCs + 48 HRSWs not yet secure), mapped to existing curriculum item ids.
-- `docs/robot-stories-design.md`: design for **Robot Stories** (planned third strand):
+- `docs/robot-stories-design.md`: design for **Robot Stories** (read before changing stories):
   short illustrated, page-turning robot stories written around the focus weak spots.
   Story rules, cast, art direction, reader UX, technical plan and open questions.
 
@@ -49,6 +52,30 @@ Reading games for young children, built with vanilla JS + Vite (no framework).
 | `games/year1/mech-builder.js` | Game 5 – drag the word plate into the gap in a sentence, mixed tricky words. |
 | `games/year1/goat-boat.js` | Game 6 – 'oa' words: read the word → tap its picture, then write it (picture → letters round `oa`). |
 | `test-year1.js` | jsdom tests (`npm test`). |
+
+### Robot Stories code map
+
+| File | Role |
+| --- | --- |
+| `stories/index.js` | `STORIES` in reading order (each unlocks the next). |
+| `stories/episodes/*.js` | One story each: targets, star words, crew, pages (sentences + scene + alt), quiz. |
+| `stories/decodable.js` | Focus lists (15 GPCs, 55 words) and the word checker (`unreadableWords`, `gpcHits`, `findGpc`). |
+| `stories/robots.js` | SVG cast: `robotSVG(id, { mode: 'robot' | 'vehicle', holding })`. |
+| `stories/reader.js` | `initRobotStories(container, words, onBack)`: shelf, meet page, reader, quiz, reward, progress (`y1Stories`). Background list `BACKGROUNDS`. |
+| `public/stories/bg/*.webp` | AI-generated backgrounds (no characters or text). |
+| `test-stories.js` | Content rules + reader tests (part of `npm test`). |
+
+### Adding a Robot Story
+
+1. Pick 2–5 GPCs from `FOCUS_GPC_IDS` and 4–8 words from `FOCUS_WORDS` (`stories/decodable.js`).
+2. Copy an episode in `stories/episodes/`, write 10–20 sentences (1–4 per page, 3–10 words each),
+   following the narrative shape in `docs/robot-stories-design.md` §3. Include one
+   `interaction: { type: 'transform', robot }` page. Names go in `starWords`.
+3. Each page's `scene` uses a background id from `BACKGROUNDS` and robots from `ROBOTS`. For a new
+   background, generate it with the prompt pattern in the design doc §6, save it at 1200×800 webp in
+   `public/stories/bg/`, and add it to `BACKGROUNDS`.
+4. Add the story to `STORIES` and run `npm test`: the checker lists any word he can't read yet and
+   any target used fewer than 3 times.
 
 Game module contract: `init<Name>(container, words, onBack)`. The game is registered in
 `YEAR1_GAMES` in `main.js`.
@@ -82,7 +109,7 @@ This is useful for pure phoneme sounds, which browser text-to-speech can’t say
 
 - `npm run dev`: Vite dev server
 - `npm run build`: production build to `dist/` (served by `npm start` / Docker, deployed to Cloud Run)
-- `npm test`: Year 1 test suite (`node test-year1.js`)
+- `npm test`: Year 1 + Robot Stories test suites (`node test-year1.js && node test-stories.js`)
 - `node test-runner.js`, `node test-bubble.js`: older word-game tests
 
 ## Agent skills

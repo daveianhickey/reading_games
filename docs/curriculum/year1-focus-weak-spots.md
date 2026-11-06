@@ -50,13 +50,14 @@ Sheet title “EY all HRSW”. All 48 already exist as items in `y1-cew` / `y1a1
 | love | oh | their | people | Mr | |
 | Mrs | your | ask | should | would | |
 
-Faint bleed-through from the next sheet shows **could, asked, house, mouse, water, want,
-very**. These may also be on the focus list (to confirm with school/parent).
+A faint row from the next sheet shows **could, asked, house, mouse, water, want, very**.
+The parent confirmed these are on the focus list too, so the full list is **55 words**
+(`FOCUS_WORDS` in `stories/decodable.js`).
 
 ## How the stories use this list
 
-- Each story picks **2–3 focus GPCs** and **5–8 focus HRSWs** and repeats each at least
+- Each story picks **2–5 focus GPCs** and **4–8 focus HRSWs** and repeats each at least
   3 times across the story (spaced repetition inside one sitting).
-- Every other word in a story must be *decodable* with Phase 2–5 GPCs he is secure with,
-  or be a focus HRSW. A story test checks this (see the design doc).
+- Every other word in a story must be *decodable* with the GPCs taught so far (Phase 2 & 3 plus
+  Autumn 1 Phase 5), or be a tricky word. `test-stories.js` checks this word by word.
 - Robot names are built from focus GPCs so that reading the hero’s name is itself practice.

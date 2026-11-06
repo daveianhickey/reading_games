@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "serve -s dist -l 8080",
-    "test": "node test-year1.js"
+    "test": "node test-year1.js && node test-stories.js"
   },
   "devDependencies": {
     "jsdom": "^22.1.0",

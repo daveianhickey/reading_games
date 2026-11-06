@@ -1,6 +1,7 @@
 # Robot Stories – Design Document
 
-Status: **draft, waiting on decisions** (see “Open questions” at the end). Nothing is built yet.
+Status: **first release built** (3 episodes). Decisions are recorded in §10. Code: `stories/`,
+tests: `test-stories.js`.
 
 A new strand of the app: short, illustrated, page-turning **robot stories** that a Year 1
 learner (age 5–6, ADHD) reads himself. The stories are written around his school
@@ -51,10 +52,11 @@ recognition of his reading.
 - Sentences of **3–10 words**. Dialogue is good (short, punchy, easy to act out).
 
 **Words**
-- Each story names **2–3 focus GPCs** and **5–8 focus HRSWs** as its targets.
-- Each target appears **≥ 3 times**.
+- Each story names **2–5 focus GPCs** and **4–8 focus HRSWs** as its targets (the first three
+  episodes use 5 GPCs each so the series covers all 15 weak sounds).
+- Each target appears **≥ 3 times**. Across the series, **every** focus word appears at least once.
 - Every word is either:
-  1. decodable with his **secure** GPCs (Phase 2–3 not on the weak list, plus Phase 5 he has met), or
+  1. decodable with the GPCs taught so far (Phase 2 & 3 plus Autumn 1 Phase 5), or
   2. decodable with a **focus** GPC (that is the practice), or
   3. a common exception word / HRSW from the curriculum, or
   4. on the story’s small **“star words”** list (names and 1–2 special words like *robot*),
@@ -124,7 +126,8 @@ was, you, what, all, one, out*.
 | 12 | “You are my hero,” said Clunk. The children came out to play. |
 | 13 | Torch and Clunk had a cool oil drink. But far off, in the dark, Darkstorm was making a plan… |
 
-(~22 sentences; the real one will be trimmed to ≤ 20 and run through the word checker.)
+(This was the first draft. The shipped text, trimmed to 20 sentences and checked word by word,
+is in `stories/episodes/torch-dark-storm.js`.)
 
 ---
 
@@ -147,7 +150,16 @@ page. Plan:
 3. Optional small animation layers on top (lights blink, wheels spin, transform flash), done in CSS
    so they can respect `prefers-reduced-motion`.
 
-Image source options (decision needed — see questions):
+**Decision: C (mix).** Backgrounds are AI-generated stills (Z-Image Turbo), no characters or
+text in them, saved as `public/stories/bg/<id>.webp` (1200×800, ~50 KB each). Robots are SVG
+(`stories/robots.js`), layered on top, so they are identical on every page and transform for real.
+Scenes that had no image yet reuse one with a colour tint (`fair-storm` = fair + storm tint,
+`moon-port` = park + dusk tint; see `BACKGROUNDS` in `stories/reader.js`). Prompt pattern used:
+*“Background art for a modern 3D CG animated TV series, stylised, bold saturated colours,
+cinematic lighting: <scene>. Empty scene, no characters, no people, no text, no letters”*.
+Don't put the word “robot” in a background prompt (the model draws one).
+
+The options that were considered:
 - **A. AI-generated stills** (e.g. via an image model), checked and curated by a grown-up,
   saved as `.webp` in `public/stories/<story-id>/`. Richest look; consistency needs care.
 - **B. Robots drawn in code (SVG)** from reusable parts. Perfectly consistent and animatable
@@ -160,7 +172,9 @@ Image source options (decision needed — see questions):
 
 **Story shelf** (from the hub, a new “Robot Stories” card)
 - Big cover cards, one per episode, showing the hero. Locked/unread/read states
-  (new episodes unlock one at a time — a variable, collectable reward).
+  (new episodes unlock one at a time — a collectable reward). A small “Grown-ups: unlock all
+  stories” link opens everything.
+- **My Robot Crew** strip: silhouettes that fill in as each story's robots join the crew.
 
 **Before reading: “Meet the robots” page**
 - Shows the story’s star words (names) with pictures; tap each to hear it. Keeps the hard
@@ -172,10 +186,10 @@ Image source options (decision needed — see questions):
 - **Turn the page by tapping** a big ▶ button on the right edge (also: tap the right half,
   swipe, or → / Space). ◀ to go back. Page-turn whoosh + slide animation.
 - Progress shown as robot-head pips, not page numbers.
-- **Tap any word to hear it** (audio-first, errorless help). Focus words could be subtly
-  underlined in the focus colour so he notices them (decision needed).
-- **🔊 read-to-me** for the whole page is available but *off by default* (it would let him
-  listen instead of read). A grown-up can turn it on in settings for tired days.
+- **Tap any word to hear it** (audio-first, errorless help).
+- **Focus highlights:** the letters of the story's focus sounds are underlined in orange
+  (T<u>or</u><u>ch</u>), and its target tricky words get a dotted purple underline.
+- **No whole-page read-aloud.** He reads; single words are one tap away.
 - **Interaction pages** (1–2 per story, at the “Transform!” moment): a big glowing button
   (“Tap to transform!”) that plays the transform animation and sound before the page can be
   turned. This is the story’s reward beat, tied to what the text says.
@@ -200,12 +214,12 @@ Fits the existing vanilla JS + Vite setup; no framework.
 
 | File | Role |
 | --- | --- |
-| `stories/data/*.js` | One module per story: `{ id, title, episode, targets: { gpcs: [ids], words: [ids] }, starWords: [], pages: [{ sentences: [], image, alt, interaction? }] }`. Target ids reuse `phonics/curriculum.js` ids. |
+| `stories/episodes/*.js` | One module per story: `{ id, title, episode, targets: { gpcs: [ids], words: [ids] }, starWords: [], pages: [{ sentences: [], image, alt, interaction? }] }`. Target ids reuse `phonics/curriculum.js` ids. |
 | `stories/index.js` | The list of stories (order, unlock rules). |
-| `stories/decodable.js` | Word checker: splits each word into graphemes using his secure + focus GPC lists, allows HRSWs and star words, returns any word that fails. |
-| `stories/shelf.js` | Story shelf screen. |
-| `stories/reader.js` | Page reader: rendering, page turning, tap-to-hear, interaction pages, end reward. Reuses `phonics/engine.js` (`say`, `sfx`, particles, stickers). |
-| `public/stories/<id>/pNN.webp` | Page images (if image option A/C). |
+| `stories/decodable.js` | Word checker: splits each word into taught graphemes, allows tricky words and star words, rejects known irregular words; `findGpc` locates a focus sound in a word (telling *oo* in *hook* from *zoom*, *ur* from *ure*…). Also holds the focus lists. |
+| `stories/robots.js` | The cast as SVG (robot + vehicle mode), props, blink/rotor/steam CSS. |
+| `stories/reader.js` | `initRobotStories`: shelf, “Meet the robots”, page reader (page turning, tap-to-hear, transform, highlights), quiz, end reward, progress. Reuses `phonics/engine.js` (`say`, `sfx`, particles, stickers). |
+| `public/stories/bg/<id>.webp` | Background images. |
 | `test-stories.js` | jsdom tests: every story has 10–20 sentences, 1–4 per page, each target ≥ 3 times, every word passes the decodable check, every page has an image + alt, reader turns pages by click/keyboard. Added to `npm test`. |
 
 `main.js` gets a “Robot Stories” card on the hub (same pattern as `YEAR1_GAMES`).
@@ -219,25 +233,25 @@ generate/draw pages → add to `stories/index.js` → `npm test`.
 ## 9. First release scope (proposal)
 
 - 3 episodes of one series (Torch & Clunk vs Darkstorm), together covering all 15 focus GPCs
-  and most of the 48 focus HRSWs.
+  and all 55 focus words:
+  1. *Torch and the Dark Storm* — ar, or, igh, ch, nk.
+  2. *Hook and the Stuck Bus* — oo (book), oo (spoon), ai, th, oi.
+  3. *Airlift to the Rescue* — air, ear, ure, ur, er.
 - Shelf, reader, tap-to-hear, transform interaction, end reward, tests.
 - Later: more episodes, branching choice pages, parent-written stories via a template,
   recorded voice for focus sounds.
 
 ---
 
-## 10. Open questions (need answers before building)
+## 10. Decisions (answered by the parent)
 
-1. **Images:** AI-generated stills (A), robots drawn in code (B), or a mix (C)?
-2. **Highlight focus words** in the text (subtle underline), or keep the text plain like a real book?
-3. **Read-to-me:** off by default with tap-a-word help (proposed), or available as a button?
-4. **“Creating” stories:** do you mean us writing them (proposed), or should he also make his
-   own (e.g. pick the hero, villain and vehicle, and the app builds the story)?
-5. **Characters:** happy with the cast and names above? Any robot he already loves (a colour,
-   a vehicle, a dinosaur-bot…) we should include?
-6. **The faint words** on the HRSW sheet (*could, asked, house, mouse, water, want, very*) — on his
-   focus list too, or just bleed-through?
-7. **Which Phase 5 sounds count as secure** for the decodable check — all of Autumn 1, or only
-   Phase 2–3 for now?
-8. **How many stories** for the first release (3 proposed), and is a series with a recurring
-   villain the right shape?
+1. **Images:** mix — AI-generated backgrounds + robots drawn in code.
+2. **Highlight focus words:** yes.
+3. **Read-to-me:** no whole-page reading; tap-a-word help only.
+4. **Creating stories:** we write them, so he can re-read them (repetition is the point).
+5. **Characters:** cast approved. He likes red, so the hero Torch is red.
+6. **Faint words** (*could, asked, house, mouse, water, want, very*): also on his focus list.
+7. **Which sounds count as taught** for the word check: Phase 2 & 3 plus Autumn 1 Phase 5.
+   The check needs *some* list to know whether a word is readable; this is what school has
+   taught so far. Tighten it in `stories/decodable.js` if he finds Phase 5 words hard.
+8. **First release:** 3 episodes, one series with a recurring villain.
