@@ -269,6 +269,11 @@ function maybeUnlockSticker(force = false) {
     return sticker;
 }
 
+// Guaranteed sticker (e.g. for finishing a Robot Story). Returns the sticker or null if all are owned.
+export function unlockSticker() {
+    return maybeUnlockSticker(true);
+}
+
 // ---------- Game shell ----------
 
 const PRAISE = ['Amazing!', 'Super star!', 'Brilliant!', 'You did it!', 'Awesome!', 'Fantastic!'];
