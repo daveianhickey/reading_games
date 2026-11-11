@@ -143,6 +143,11 @@ export const sfx = {
     tick: () => tone(880, 0.1, { type: 'square', volume: 0.12 }),
     roar: () => { tone(110, 0.8, { type: 'sawtooth', volume: 0.2, slideTo: 70 }); noise(0.8, { volume: 0.25, lowpass: 700 }); },
     powerUp: () => [0, 1, 2, 3, 4].forEach(i => tone(300 + i * 150, 0.12, { type: 'square', volume: 0.1, delay: i * 0.06 })),
+    // Torch Quest (quest/): chiptune-style effects.
+    jump: () => tone(420, 0.12, { type: 'square', volume: 0.07, slideTo: 760 }),
+    coin: () => { tone(1320, 0.06, { type: 'square', volume: 0.07 }); tone(1760, 0.1, { type: 'square', volume: 0.07, delay: 0.05 }); },
+    thud: () => { tone(140, 0.25, { type: 'triangle', volume: 0.3, slideTo: 70 }); noise(0.15, { volume: 0.2, lowpass: 600 }); },
+    powerDown: () => [0, 1, 2, 3].forEach(i => tone(440 - i * 90, 0.18, { type: 'square', volume: 0.1, delay: i * 0.14 })),
     fanfare: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i === 3 ? 0.5 : 0.18, { type: 'triangle', volume: 0.2, delay: i * 0.15 }))
 };
 

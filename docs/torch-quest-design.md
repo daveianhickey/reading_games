@@ -1,6 +1,7 @@
 # Torch Quest – Design Document
 
-Status: **design only, nothing built yet.** Open questions for the parent are in §12.
+Status: **first slice built** (World 1, levels 1–3, Scrap/Copper/Silver gates). Code: `quest/`,
+tests: `test-quest.js`. What is built and what is not is listed in §11. The parent's decisions are in §12.
 
 A fourth strand of the app: an old-school, side-scrolling platform adventure for a phone, with
 a world map, hearts, bosses and a workshop to build. It is an original game in the platformer
@@ -44,7 +45,7 @@ most of it and deliberately breaks one rule.
 | --- | --- |
 | Audio-first | **Kept, but controlled.** The game speaks the target. Answer plates do *not* speak when touched, because that lets him listen instead of read. |
 | 10–15 s feedback loops | **Kept.** A word gate arrives every 10–15 s of running. |
-| Short sessions | **Kept.** A level is 8 gates, about 3 minutes. Losing costs at most those 3 minutes. |
+| Short sessions | **Kept.** A level is 8 gates, about 3 minutes. Losing costs at most those 3 minutes (half that in the early worlds, which have a mid-level flag). |
 | Variable rewards | **Kept.** Mystery crates, different boss, new workshop parts. |
 | One goal on screen, big targets | **Kept.** One gate at a time, plates ≥ 72 px, hearts and a progress bar instead of numbers. |
 | Thinking beats guessing | **Made strict.** One answer per gate. A wrong answer is final for that gate. |
@@ -64,7 +65,8 @@ game.**
 
 - **Tap anywhere** to jump (over gaps, crates and Darkstorm's grumpy drones). This is the light
   “video game” layer. Bumping into something bounces Torch back and spills a few bolts (the
-  coin). It never costs a heart.
+  coin). It never costs a heart, and an obstacle gives way after two bumps (the crate smashes,
+  a plank drops over the gap), so jumping can never stop him reaching the next word.
 - Every 10–15 seconds the path is blocked by a **word gate**. Time slows, Torch's radio says a
   word, and three plates slide in. He taps the plate with that word. Right: the gate opens and
   he runs on. Wrong: the plate crumbles and he **loses a heart**.
@@ -127,17 +129,20 @@ Rules that make guessing lose:
 5. **Stars gate the map, not level completion.** A lucky scrape through with one heart earns one
    star. The boss door needs most of the world's stars.
 
-The numbers, for a level of 8 gates and 3 hearts with 3 plates per gate:
+The numbers, for a level of 8 gates and 3 hearts with 3 plates per gate, measured by playing
+each level 2,000 times with a bot (`test-quest.js`):
 
-| Player | Chance of finishing the level |
-| --- | --- |
-| Pure guessing | **2%** (0.4% with 4 plates; 3 stars by guessing: 1 in 6,500) |
-| Knows half the words, guesses the rest | about 40% |
-| Knows 6 of the 8 | 100%, with 1–3 stars |
-| Knows them all | 100%, 3 stars |
+| Player | Finishes, full level | Finishes, with the mid-level flag |
+| --- | --- | --- |
+| Pure guessing | **about 2%** | about 6%, almost always with 1 star (2+ stars: under 1%) |
+| Knows half the words, guesses the rest | about 48% | about 72% |
+| Knows most (85%) | about 96% | over 99% |
+| Knows them all | 100%, 3 stars | 100%, 3 stars |
 
-These are checked by a test that plays every level with a random-tapping bot and a perfect bot
-(§10), so the property cannot quietly regress.
+The flag makes scraping through easier, which is why a run that used it earns only 1 star and
+why stars, not finished levels, open the map: two 1-star levels do not open level 3.
+The test fails if guessing ever finishes more than 10% (4% without the flag), so the property
+cannot quietly regress.
 
 ---
 
@@ -172,8 +177,12 @@ What mastery buys:
 - **A wrong answer:** the plate crumbles with a soft thud, a heart cracks, and the right plate
   lights up for a moment while the word is said: “That one is *was*.” Then he runs on.
   Feedback is information, not punishment.
-- **No hearts left:** Torch powers down, Clunk tows him back to the start of the level. Bolts
-  collected stay collected. The map, stars and blocks are untouched.
+- **No hearts left:** Torch powers down and the screen shows the words that tripped him, to tap
+  and hear. The map, stars and blocks are untouched.
+  - *Early worlds (World 1–2):* there is a **flag after gate 4**. If he powers down past it he
+    may go back to the flag **once per try**, with the hearts he had there (at least 2). A run
+    that used the flag earns 1 star at most.
+  - *Later worlds:* back to the start of the level.
 - **Fail the same level twice:** the retry button becomes **Training Bay**. This is a calm room
   with no hearts where the 2–3 words that beat him are taught the old way: said aloud, shown,
   tapped, hints allowed. About one minute, then straight back to the level. This is where the
@@ -259,23 +268,30 @@ that looks too plain, generate sprite sheets the way the story backgrounds were 
 
 ## 11. Build order
 
-1. **Slice (playable):** World 1, levels 1–3, tier 1–2 gates, hearts, stars, mastery saved,
-   mash-bot test. **Then watch him play it** before building more. The questions that matter:
-   does he slow down at gates, does losing a heart upset or motivate him, is 3 minutes right.
-2. **Full loop:** world map, all of World 1 with its boss, Training Bay, tiers 3–4, rust.
-3. **Depth:** worlds 2–5, workshop, crates, grown-up's progress page.
+1. **Slice (built):** World 1, levels 1–3. Running and jumping, hear-it gates (Scrap),
+   look-alike gates (Copper), flash-and-find gates (Silver and, for now, Gold), hearts, the
+   mid-level flag, stars that unlock levels, overheat, mastery with the one-tier-a-day rule
+   and rust, the block wall on the map, a "words on this run" card before each level, and
+   the guessing-bot test. **Now watch him play it** before building more. The questions that
+   matter: does he slow down at gates, does losing a heart upset or motivate him, is 3
+   minutes right, is the jumping too hard or too easy.
+2. **Full loop (not built):** levels 4–5 and the boss of World 1, Training Bay, the Gold
+   gate (read it cold / build it), the quiet word swap after four fails, mystery crates.
+3. **Depth (not built):** worlds 2–5, workshop, drones, music, grown-up's progress page.
 
 ---
 
-## 12. Open questions for the parent
+## 12. Decisions (from the parent)
 
-1. **How hard should failing be?** Proposed: 3 hearts, restart the 3-minute level. Softer
-   option: a mid-level checkpoint. Harder: restart the world's boss run.
-2. **Landscape only?** The runner needs width to show what is coming. Portrait is possible but
-   cramped.
-3. **Jumping:** kept light and never costing hearts. Should it be harder as the worlds go on,
-   or stay simple so reading is the only real test?
-4. **One tier per word per day:** it is the main memory mechanism, but it means he cannot
-   “finish” a world in one sitting. Acceptable?
-5. **Recorded voice:** would you record the 55 words? A parent's voice is clearer than browser
-   speech for short words like *of* and *the*, and gates depend on hearing the word exactly.
+1. **Failing:** a mid-level flag in the early worlds, the full level later (§7).
+2. **Landscape only** is fine. The slice still plays in portrait, just smaller.
+3. **One tier per word per day** is accepted.
+4. **Voice:** browser speech for now; the parent may record the words later (an item's
+   `audio` field already supports this).
+
+Where progress lives: `localStorage` key `y1Quest`, in the browser on that one device. It
+survives closing the tab, but not clearing site data, and it does not follow him to another
+phone. Syncing across devices would need accounts and a server, which the app does not have.
+
+Still open: should jumping get harder in later worlds, or stay simple so reading is the only
+real test?

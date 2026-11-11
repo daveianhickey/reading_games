@@ -234,6 +234,13 @@ function renderYear1Section() {
           <span style="display: block; font-size: 1.1rem; font-weight: 600;">Read the adventures of Torch and the Robot Crew!</span>
         </span>
       </button>
+      <button class="glass-card" id="torch-quest-btn" style="width: 100%; border: none; cursor: pointer; font-family: inherit; margin-bottom: 1.5rem; padding: 1.5rem 2rem; display: flex; align-items: center; gap: 1.5rem; text-align: left; background: linear-gradient(120deg, #2b3a67, #e8402f); color: #fff; animation: popIn 0.5s ease-out both;">
+        <span style="font-size: 4rem; animation: float 3s ease-in-out infinite;">🕹️</span>
+        <span>
+          <span style="display: block; font-size: 2rem; font-weight: 800;">Torch Quest</span>
+          <span style="display: block; font-size: 1.1rem; font-weight: 600;">Run, jump and read to open the gates. Keep your hearts!</span>
+        </span>
+      </button>
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem;">
         ${YEAR1_GAMES.map((g, i) => `
           <button class="glass-card year1-card" data-game="${g.id}" style="text-align: center; cursor: pointer; border: none; font-family: inherit; padding: 1.5rem; animation: popIn 0.5s ease-out ${0.1 * i}s both; display: flex; flex-direction: column; align-items: center;">
@@ -261,6 +268,12 @@ function setupYear1Listeners() {
     import('./stories/reader.js').then(module => {
       window.scrollTo(0, 0);
       module.initRobotStories(appContainer, words, renderGameHub);
+    });
+  });
+  document.getElementById('torch-quest-btn').addEventListener('click', () => {
+    import('./quest/index.js').then(module => {
+      window.scrollTo(0, 0);
+      module.initTorchQuest(appContainer, words, renderGameHub);
     });
   });
   document.querySelectorAll('.year1-card').forEach(card => {

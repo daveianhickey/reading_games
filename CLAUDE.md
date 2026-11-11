@@ -37,9 +37,10 @@ Reading games for young children, built with vanilla JS + Vite (no framework).
   short illustrated, page-turning robot stories written around the focus weak spots.
   Story rules, cast, art direction, reader UX, technical plan and open questions.
 
-- `docs/torch-quest-design.md`: design for **Torch Quest** (not built yet): a side-scrolling
-  platform adventure with hearts, a world map, bosses and per-word mastery. It deliberately
-  replaces the zero-failure rule so that guessing cannot win. Read before building it.
+- `docs/torch-quest-design.md`: design for **Torch Quest** (read before changing it): a
+  side-scrolling platform adventure with hearts, a world map and per-word mastery. It
+  deliberately replaces the zero-failure rule so that guessing cannot win. §11 lists what is
+  built (World 1, levels 1–3) and what is not.
 
 ## Year 1 code map
 
@@ -81,6 +82,21 @@ Reading games for young children, built with vanilla JS + Vite (no framework).
 4. Add the story to `STORIES` and run `npm test`: the checker lists any word he can't read yet and
    any target used fewer than 3 times.
 
+### Torch Quest code map
+
+| File | Role |
+| --- | --- |
+| `quest/content.js` | `WORLDS` → levels → items (tricky words by curriculum id, decodable words per focus GPC), plus `DISTRACTOR_WORDS`. |
+| `quest/mastery.js` | Pure logic: tiers (Scrap → Gold), 3 ticks to go up, one tier per day, rust, `pickGateItems`, level unlocks. Storage `y1Quest`. |
+| `quest/gates.js` | Pure logic: builds a gate's 3 plates for a word at a tier (different words, then look-alikes, then flash-and-find). |
+| `quest/run.js` | Pure logic: one attempt at a level: hearts, one answer per gate, mid-level flag, stars, overheat guard. |
+| `quest/level.js`, `quest/runner.js` | Seeded course generator and the canvas runner (auto-run, tap to jump). Bumps cost bolts, never hearts. |
+| `quest/index.js` | `initTorchQuest(container, words, onBack)`: map, level, plates, power-down and flag screens. |
+| `test-quest.js` | Rules, a guessing bot (must almost never finish a level) and screen tests (part of `npm test`). |
+
+To add a level: add it to `WORLDS` in `quest/content.js` (3 focus words + one focus GPC with
+3–4 decodable words) and run `npm test`, which checks every word and the guessing odds.
+
 Game module contract: `init<Name>(container, words, onBack)`. The game is registered in
 `YEAR1_GAMES` in `main.js`.
 
@@ -113,7 +129,7 @@ This is useful for pure phoneme sounds, which browser text-to-speech can’t say
 
 - `npm run dev`: Vite dev server
 - `npm run build`: production build to `dist/` (served by `npm start` / Docker, deployed to Cloud Run)
-- `npm test`: Year 1 + Robot Stories test suites (`node test-year1.js && node test-stories.js`)
+- `npm test`: Year 1, Robot Stories and Torch Quest test suites (`node test-year1.js && node test-stories.js && node test-quest.js`)
 - `node test-runner.js`, `node test-bubble.js`: older word-game tests
 
 ## Agent skills
