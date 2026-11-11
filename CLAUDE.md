@@ -37,6 +37,10 @@ Reading games for young children, built with vanilla JS + Vite (no framework).
   short illustrated, page-turning robot stories written around the focus weak spots.
   Story rules, cast, art direction, reader UX, technical plan and open questions.
 
+- `docs/torch-quest-design.md`: design for **Torch Quest** (not built yet): a side-scrolling
+  platform adventure with hearts, a world map, bosses and per-word mastery. It deliberately
+  replaces the zero-failure rule so that guessing cannot win. Read before building it.
+
 ## Year 1 code map
 
 | File | Role |
