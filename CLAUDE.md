@@ -5,7 +5,8 @@ Reading games for young children, built with vanilla JS + Vite (no framework).
 
 ## Three strands
 
-1. **Word games** (`games/*.js`: Bubble Pop, Memory Match, Rocket Race, Sound Spotter).
+1. **Word games** (`games/*.js`: Bubble Pop, Memory Match, Rocket Race). Sound Spotter
+   (`games/sound-spotter.js`) is no longer on the hub; its file is kept.
    A grown-up types 3–10 words (stored in `localStorage.readingWords`); these games use those words.
    Memory Match says each card's word as it flips (and again on a match), and turns one card
    per round into a 🔊 sound card (says its word, shows no text),
@@ -53,7 +54,7 @@ Reading games for young children, built with vanilla JS + Vite (no framework).
 | `games/year1/iron-rig.js` | Game 1 – memory snap, Phase 2/3 GPCs. |
 | `games/year1/rocket-bay.js` | Game 2 – catchphrase → pod, split digraphs + HRSWs. |
 | `games/year1/bot-snap.js` | Game 3 – conveyor snap, spelling words. |
-| `games/year1/orbit-defense.js` | Game 4 – shield ring, Phase 5 alternative spellings. |
+| `games/year1/orbit-defense.js` | Game 4 – shield ring, Phase 5 alternative spellings. Removed from the hub (`YEAR1_GAMES`); file and tests kept. |
 | `games/year1/mech-builder.js` | Game 5 – drag the word plate into the gap in a sentence, mixed tricky words. |
 | `games/year1/goat-boat.js` | Game 6 – 'oa' words: read the word → tap its picture, then write it (picture → letters round `oa`). |
 | `test-year1.js` | jsdom tests (`npm test`). |
