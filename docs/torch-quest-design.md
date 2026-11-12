@@ -1,7 +1,8 @@
 # Torch Quest – Design Document
 
-Status: **first slice built** (World 1, levels 1–3, Scrap/Copper/Silver gates). Code: `quest/`,
-tests: `test-quest.js`. What is built and what is not is listed in §11. The parent's decisions are in §12.
+Status: **all five worlds built** (25 levels and 5 bosses), with Training Bay and the Gold
+sentence gate. Code: `quest/`, tests: `test-quest.js`. What is built and what is not is listed
+in §11. The parent's decisions are in §12.
 
 A fourth strand of the app: an old-school, side-scrolling platform adventure for a phone, with
 a world map, hearts, bosses and a workshop to build. It is an original game in the platformer
@@ -100,12 +101,22 @@ of gate he gets depends on that word's mastery tier (§6), so the game gets hard
 | Tier | Gate | What he does | What it trains |
 | --- | --- | --- | --- |
 | 1 Scrap | **Hear it, find it** | Radio says the word. 3 plates with clearly different words (*was / the / go*). | Linking the spoken word to its print. |
-| 2 Copper | **Look-alikes** | Same, but the other plates are near-misses (*was / saw / wag*, *there / their / three*). | Reading the whole word, not the first letter. |
+| 2 Copper | **Look-alikes** | Same, but the other plates are near-misses (*was / saw / wag*, *there / three / then*). | Reading the whole word, not the first letter. |
 | 3 Silver | **Flash and find** | No voice. The word shows on a screen for 1.5 s, then hides. Then 3 look-alike plates. | Holding the spelling in memory. This is the memorising step. |
-| 4 Gold | **Read it cold** | No voice. A sentence with a gap and a picture (“a ___ with a red door” 🏠), 4 plates. Or: **build it** from letter blocks with 2 decoys. | Reading for meaning and spelling from memory. |
+| 4 Gold | **Read it cold** | No voice. A sentence with a gap and a picture (“a ___ with a red door” 🏠). (*Build it* from letter blocks: not built yet.) | Reading for meaning. |
+
+The number of plates comes from the world (3 in Worlds 1–2, 4 from World 3, §8a).
 
 GPC gates work the same way with decodable words: the radio says “chomp”, the plates are
-*chomp / shop / thump*. At tier 4 the gap sentence comes from the item's clue in the curriculum.
+*chomp / shop / thump*. At tier 4 the gap sentence comes from the item's clue in the curriculum;
+decodable words have no clue sentence, so at Gold they stay flash-and-find.
+
+**Fair plates.** A hear-it gate never shows a word that sounds the same as the target
+(*to / too*, *there / their*, *would / wood*): he cannot tell those apart by ear, so it would be
+a coin toss. A sentence gate is the opposite: there the sound-alike is the best test of all, so
+*there* is always tested against *their* (“the cat is over ___”) and the other way round.
+Sentence gates never use another tricky word as a wrong plate, because many would also fit the
+gap (*his / her / my* in “___ dog is big”).
 
 Look-alike distractors are generated, not hand-written: same first letter, same length ± 1,
 letters swapped or reversed (*was/saw*, *of/off*, *her/here*), drawn from curriculum words so
@@ -183,6 +194,10 @@ What mastery buys:
     may go back to the flag **once per try**, with the hearts he had there (at least 2). A run
     that used the flag earns 1 star at most.
   - *Later worlds:* back to the start of the level.
+- **Fall down a hole:** a bump or fall never costs a heart. After a fall Torch comes back
+  about 140 px (roughly 3 cm on a phone) before the hole, never on top of an earlier obstacle,
+  and stands still for half a second so he can see the hole coming. Two falls into the same
+  hole and Clunk lays a plank over it.
 - **Fail the same level twice:** the retry button becomes **Training Bay**. This is a calm room
   with no hearts where the 2–3 words that beat him are taught the old way: said aloud, shown,
   tapped, hints allowed. About one minute, then straight back to the level. This is where the
@@ -201,18 +216,67 @@ covered in oil and flies off grumbling, as in the stories.
 ## 8. Worlds and content
 
 Five worlds, each 5 levels and a boss (30 stages). Together they cover exactly the focus list in
-`docs/curriculum/year1-focus-weak-spots.md`: 15 GPCs and 55 words. A level introduces 3–4 items.
+`docs/curriculum/year1-focus-weak-spots.md`: 15 GPCs and 55 words (a test checks nothing is
+missing). Levels 1–4 of a world introduce 2–4 new tricky words and one or two sounds; level 5 is
+a sound-only review level, which gives a breather before the boss. Every level also mixes in
+3 review words from anywhere earlier in the game, weakest and rustiest first.
 
-| World | Focus GPCs | Focus words |
-| --- | --- | --- |
-| 1 Scrap Yard | ch, th, nk | the, to, go, into, of, put, pull, push, he, we, me, be |
-| 2 Rain Rail | ai, igh, oo (spoon) | was, her, my, you, they, all, are, ball, tall, his, buses |
-| 3 Dark Park | ar, ur, oo (book), or | when, what, said, so, have, were, out, like, some, come |
-| 4 Oil Port | oi, ear, air | there, little, one, do, children, love, oh, their, people |
-| 5 Storm Tower | ure, er | Mr, Mrs, your, ask, should, would, could, asked, house, mouse, water, want, very |
+| Level | 1 | 2 | 3 | 4 | 5 (sounds review) |
+| --- | --- | --- | --- | --- | --- |
+| **World 1 Scrap Yard** | the, to, go · ch | into, of, put · th | pull, push, he · nk | we, me, be · ch, th | nk, th, ch |
+| **World 2 Rain Rail** | was, her, my · ai | you, they, all · igh | are, ball, tall · oo (spoon) | his, buses · ai | igh, oo (spoon) |
+| **World 3 Dark Park** | when, what, said · ar | so, have, were · ur | out, like · oo (book) | some, come · or | ar, ur, oo (book) |
+| **World 4 Oil Port** | there, little, one · oi | do, children, love · ear | oh, their, people · air | oi, ear | air, oi, ear |
+| **World 5 Storm Tower** | Mr, Mrs, your · er | ask, asked, should · ure, er | would, could, house · er | mouse, water, want, very · ure | er, ure |
 
-GPC items use 3–4 decodable words each, taken from the “story word ideas” column of the focus
-list (ch: *chop, chomp, rich, munch*), and checked with the existing `whyReadable` checker.
+Sounds are practised through 2–5 decodable words each, mostly from the “story word ideas”
+column of the focus list (ch: *chop, chip, rich, much*), all checked with the `whyReadable`
+checker. Level ids (`1-1`…`5-5`, `1-boss`…) are saved progress and must never be renumbered.
+
+### 8a. The skill ladder: what gets harder, world by world
+
+Two things make the game harder. Each **word** gets harder as its block climbs (§4, §6). The
+**worlds** also ask more as he goes, so a later world is harder even for a word he has just met:
+
+| | W1 Scrap Yard | W2 Rain Rail | W3 Dark Park | W4 Oil Port | W5 Storm Tower |
+| --- | --- | --- | --- | --- | --- |
+| Plates per gate | 3 | 3 | **4** | 4 | 4 |
+| Easiest gate | hear it | hear it | **look-alikes** | look-alikes | look-alikes |
+| Mid-level flag | yes | yes | **no, full level** | no | no |
+| Jumps | small gaps | wider gaps | **double crates** | more of both | widest |
+| Boss fuse | 12 s | 11 s | 10 s | 9 s | 9 s (12 balls) |
+| Boss door | 6 Copper blocks | 10 Copper | **4 Silver** | 8 Silver | **4 Gold** |
+
+Why these steps:
+- **4 plates from World 3** cut lucky guessing from about 1 in 3 to 1 in 4 per gate. Measured
+  over 1,000 bot runs per stage, a pure guesser finishes a World 3–5 level under 1% of the time
+  (World 1–2: about 6% with the flag, 2% without).
+- **Look-alike floor from World 3.** New words no longer get the easy “clearly different” plates:
+  by then he has had two worlds of practice at telling *was* from *saw*.
+- **The flag goes at World 3**, as the parent decided: mid-level in the early worlds, the full
+  level later.
+- **Boss doors need mastered blocks, not just stars.** Stars show he can finish levels; blocks
+  show he can read the words *on different days*. Silver needs at least 2 days and Gold at least
+  3 (one step per day), so Worlds 3–5 cannot be rushed in one sitting. This is the long
+  incentive to memorise.
+- **Jumping stays forgiving.** Gaps widen and crates stack, so the running part keeps some
+  challenge, but a bump never costs a heart and an obstacle gives way after two bumps. Reading
+  stays the only thing that decides a level.
+
+### 8b. Bosses
+
+Each world ends with a boss: one of Darkstorm's drones (Grabber, Drizzle, Shade, Gusher) and
+finally Darkstorm himself. The drone hovers above the course and drops spiky scrap balls. Each
+ball is a gate: pick the right word to zap it back up and knock a bar off the drone's health.
+
+- 10 balls (12 for Darkstorm), drawn from **every** word of the world, weakest first.
+- 3 hearts, no flag.
+- **A fuse**: once the plates unlock, a bar burns down (12 s in World 1, 9 s in World 5).
+  Letting it burn out counts as a wrong answer. This is the only time pressure in the game,
+  and it is generous: a careful reader needs 2–4 s. It exists so bosses test words he knows
+  quickly, not words he can puzzle out slowly.
+- Beating a boss opens the next world. The drone flies off covered in oil, never hurt.
+- A beaten boss stays open on the map, even if a block later slips back a step.
 
 With one tier per day, reaching Gold on a whole world takes at least a week of short sessions,
 and the full game is a term's worth of play. Later: a bonus world built from the grown-up's
@@ -252,7 +316,7 @@ Vanilla JS and Vite like the rest of the app, no new dependencies.
 | `quest/gates.js` | Pure logic: build a gate for an item at a tier, look-alike distractors, plate positions. |
 | `quest/level.js` | Level generator: strings terrain segments and gates together from a seed. |
 | `quest/runner.js` | Canvas 2D game loop (fixed timestep), Torch physics, collisions, camera, sprites. |
-| `quest/ui.js` | DOM layer over the canvas: plates (real buttons, so they are crisp and accessible), hearts, map, Training Bay, workshop. |
+| `quest/index.js` | DOM layer over the canvas: plates (real buttons, so they are crisp and accessible), hearts, map, boss fuse, Training Bay. |
 | `quest/index.js` | `initTorchQuest(container, words, onBack)`, opened from a banner on the hub like Robot Stories. |
 | `test-quest.js` | Added to `npm test`. |
 
@@ -269,15 +333,17 @@ that looks too plain, generate sprite sheets the way the story backgrounds were 
 ## 11. Build order
 
 1. **Slice (built):** World 1, levels 1–3. Running and jumping, hear-it gates (Scrap),
-   look-alike gates (Copper), flash-and-find gates (Silver and, for now, Gold), hearts, the
-   mid-level flag, stars that unlock levels, overheat, mastery with the one-tier-a-day rule
-   and rust, the block wall on the map, a "words on this run" card before each level, and
-   the guessing-bot test. **Now watch him play it** before building more. The questions that
-   matter: does he slow down at gates, does losing a heart upset or motivate him, is 3
-   minutes right, is the jumping too hard or too easy.
-2. **Full loop (not built):** levels 4–5 and the boss of World 1, Training Bay, the Gold
-   gate (read it cold / build it), the quiet word swap after four fails, mystery crates.
-3. **Depth (not built):** worlds 2–5, workshop, drones, music, grown-up's progress page.
+   look-alike gates (Copper), flash-and-find gates (Silver), hearts, the mid-level flag, stars
+   that unlock levels, overheat, mastery with the one-tier-a-day rule and rust, the block wall,
+   a "words on this run" card before each level, and the guessing-bot test. He loved it.
+2. **Five worlds (built):** all 25 levels and 5 bosses (§8), the skill ladder (§8a), a world
+   look each (scrap yard at sunset, rainy railway, night park, harbour, purple storm), boss
+   drones with a fuse (§8b), the map with boss-door requirements, the Training Bay (§7), the
+   Gold *read it in a sentence* gate (§4), no sound-alike plates in hear-it gates, and the
+   respawn after a fall moved further back (about 3 cm on a phone, with a short pause).
+3. **Not built yet:** the Gold *build it from letters* gate, the quiet word swap after four
+   fails, mystery crates, Torch's Workshop (bolts are collected but cannot be spent yet),
+   music, the grown-up's progress page.
 
 ---
 
@@ -293,5 +359,6 @@ Where progress lives: `localStorage` key `y1Quest`, in the browser on that one d
 survives closing the tab, but not clearing site data, and it does not follow him to another
 phone. Syncing across devices would need accounts and a server, which the app does not have.
 
-Still open: should jumping get harder in later worlds, or stay simple so reading is the only
-real test?
+Still open: jumping gets a little harder in later worlds (wider gaps, stacked crates) but
+never costs a heart. If he finds the jumping frustrating or too easy, say so: it is one
+setting per world (`obstacles` in `quest/content.js`).
