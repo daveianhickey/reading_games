@@ -3,13 +3,17 @@
 // *when* a gate is reached; everything that decides winning or losing is here.
 import { buildGate } from './gates.js';
 import { itemState, recordAnswer, pickGateItems, GATES_PER_LEVEL } from './mastery.js';
+import { LEVELS } from './content.js';
 
 export const MAX_HEARTS = 3;
 export const HEAL_STREAK = 5;
 export const CHECKPOINT_AFTER = GATES_PER_LEVEL / 2;
 const CHECKPOINT_MIN_HEARTS = 2;
 
-export function createRun({ levelIndex, state, rng = Math.random, now = () => Date.now(), checkpoint = true }) {
+export function createRun({ levelIndex, state, rng = Math.random, now = () => Date.now(), checkpoint }) {
+    const lvl = LEVELS[levelIndex];
+    const world = lvl.world;
+    if (checkpoint === undefined) checkpoint = world.checkpoint && !lvl.boss;
     const items = pickGateItems(levelIndex, state, rng, now());
     const positions = []; // last correct plate positions, to stop "always the middle one"
     let gate = null;
@@ -25,14 +29,17 @@ export function createRun({ levelIndex, state, rng = Math.random, now = () => Da
         missed: [],   // words answered wrong this attempt
         promoted: [], // { word, tier }
         results: [],  // true / false per gate, for the progress pips
-        total: GATES_PER_LEVEL,
+        total: items.length,
+        boss: lvl.boss,
+        checkpoint,
 
         currentGate() {
             if (!gate && run.status === 'running') {
                 const item = items[run.gateIndex];
                 const n = positions.length;
                 const avoid = n >= 2 && positions[n - 1] === positions[n - 2] ? positions[n - 1] : -1;
-                gate = buildGate(item, itemState(state, item.id).tier, rng, avoid);
+                const tier = Math.max(itemState(state, item.id).tier, world.minTier || 0);
+                gate = buildGate(item, tier, rng, avoid, world.plates || 3);
                 positions.push(gate.correctIndex);
             }
             return gate;

@@ -5,7 +5,8 @@ Reading games for young children, built with vanilla JS + Vite (no framework).
 
 ## Three strands
 
-1. **Word games** (`games/*.js`: Bubble Pop, Memory Match, Rocket Race, Sound Spotter).
+1. **Word games** (`games/*.js`: Bubble Pop, Memory Match, Rocket Race). Sound Spotter
+   (`games/sound-spotter.js`) is no longer on the hub; its file is kept.
    A grown-up types 3–10 words (stored in `localStorage.readingWords`); these games use those words.
    Memory Match says each card's word as it flips (and again on a match), and turns one card
    per round into a 🔊 sound card (says its word, shows no text),
@@ -39,8 +40,9 @@ Reading games for young children, built with vanilla JS + Vite (no framework).
 
 - `docs/torch-quest-design.md`: design for **Torch Quest** (read before changing it): a
   side-scrolling platform adventure with hearts, a world map and per-word mastery. It
-  deliberately replaces the zero-failure rule so that guessing cannot win. §11 lists what is
-  built (World 1, levels 1–3) and what is not.
+  deliberately replaces the zero-failure rule so that guessing cannot win. §8 has the
+  level-by-level plan and the world-by-world skill ladder; §11 lists what is built (all five
+  worlds and bosses) and what is not.
 
 ## Year 1 code map
 
@@ -53,7 +55,7 @@ Reading games for young children, built with vanilla JS + Vite (no framework).
 | `games/year1/iron-rig.js` | Game 1 – memory snap, Phase 2/3 GPCs. |
 | `games/year1/rocket-bay.js` | Game 2 – catchphrase → pod, split digraphs + HRSWs. |
 | `games/year1/bot-snap.js` | Game 3 – conveyor snap, spelling words. |
-| `games/year1/orbit-defense.js` | Game 4 – shield ring, Phase 5 alternative spellings. |
+| `games/year1/orbit-defense.js` | Game 4 – shield ring, Phase 5 alternative spellings. Removed from the hub (`YEAR1_GAMES`); file and tests kept. |
 | `games/year1/mech-builder.js` | Game 5 – drag the word plate into the gap in a sentence, mixed tricky words. |
 | `games/year1/goat-boat.js` | Game 6 – 'oa' words: read the word → tap its picture, then write it (picture → letters round `oa`). |
 | `test-year1.js` | jsdom tests (`npm test`). |
@@ -86,16 +88,18 @@ Reading games for young children, built with vanilla JS + Vite (no framework).
 
 | File | Role |
 | --- | --- |
-| `quest/content.js` | `WORLDS` → levels → items (tricky words by curriculum id, decodable words per focus GPC), plus `DISTRACTOR_WORDS`. |
-| `quest/mastery.js` | Pure logic: tiers (Scrap → Gold), 3 ticks to go up, one tier per day, rust, `pickGateItems`, level unlocks. Storage `y1Quest`. |
-| `quest/gates.js` | Pure logic: builds a gate's 3 plates for a word at a tier (different words, then look-alikes, then flash-and-find). |
+| `quest/content.js` | `WORLDS` → levels → items, each world's skill settings (plates, gate floor, flag, obstacles, boss), `HOMOPHONES`, `DISTRACTOR_WORDS`. `LEVELS` is every stage in order (5 levels + boss per world). |
+| `quest/mastery.js` | Pure logic: tiers (Scrap → Gold), 3 ticks to go up, one tier per day, rust, `pickGateItems`, level / world / boss-door unlocks. Storage `y1Quest`. |
+| `quest/gates.js` | Pure logic: builds a gate's plates for a word at a tier (different words, look-alikes, flash-and-find, Gold sentence). No sound-alikes in hear-it gates. |
 | `quest/run.js` | Pure logic: one attempt at a level: hearts, one answer per gate, mid-level flag, stars, overheat guard. |
-| `quest/level.js`, `quest/runner.js` | Seeded course generator and the canvas runner (auto-run, tap to jump). Bumps cost bolts, never hearts. |
-| `quest/index.js` | `initTorchQuest(container, words, onBack)`: map, level, plates, power-down and flag screens. |
+| `quest/level.js`, `quest/runner.js` | Seeded course generator and the canvas runner (auto-run, tap to jump, a `THEMES` look per world, boss drone). Bumps cost bolts, never hearts. |
+| `quest/index.js` | `initTorchQuest(container, words, onBack)`: world map, level, plates, boss fuse, power-down, flag and Training Bay screens. |
 | `test-quest.js` | Rules, a guessing bot (must almost never finish a level) and screen tests (part of `npm test`). |
 
-To add a level: add it to `WORLDS` in `quest/content.js` (3 focus words + one focus GPC with
-3–4 decodable words) and run `npm test`, which checks every word and the guessing odds.
+To add a level: add it to a world in `WORLDS` in `quest/content.js` (2–4 focus words and one or
+two focus GPCs with decodable words) and run `npm test`, which checks every word, coverage of
+the focus list and the guessing odds. Never renumber a level id: they are saved progress.
+`QUICK=1 node test-quest.js` skips the slow guessing simulation while editing.
 
 Game module contract: `init<Name>(container, words, onBack)`. The game is registered in
 `YEAR1_GAMES` in `main.js`.

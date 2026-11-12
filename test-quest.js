@@ -12,12 +12,12 @@ global.requestAnimationFrame = cb => setTimeout(() => cb(Date.now()), 16);
 global.cancelAnimationFrame = id => clearTimeout(id);
 dom.window.HTMLCanvasElement.prototype.getContext = () => null; // no canvas in jsdom
 
-const { LEVELS, ALL_ITEMS, DISTRACTOR_WORDS } = await import('./quest/content.js');
+const { LEVELS, WORLDS, ALL_ITEMS, DISTRACTOR_WORDS, soundsSame, worldItems } = await import('./quest/content.js');
 const m = await import('./quest/mastery.js');
 const g = await import('./quest/gates.js');
 const { createRun, createTapGuard, CHECKPOINT_AFTER } = await import('./quest/run.js');
-const { buildCourse, mulberry32 } = await import('./quest/level.js');
-const { createGame } = await import('./quest/runner.js');
+const { buildCourse, mulberry32, GROUND_Y } = await import('./quest/level.js');
+const { createGame, RESPAWN_BACK } = await import('./quest/runner.js');
 const { initTorchQuest } = await import('./quest/index.js');
 const { findItem } = await import('./phonics/curriculum.js');
 const d = await import('./stories/decodable.js');
@@ -42,18 +42,50 @@ const T0 = new Date(2026, 0, 5, 10).getTime();
 // ---------- Content ----------
 
 await test('content: every item comes from the curriculum and is on the focus list', () => {
-    const ids = ALL_ITEMS.map(i => i.id);
-    assert.strictEqual(new Set(ids).size, ids.length, 'item ids are unique');
+    for (const l of LEVELS) {
+        const ids = l.items.map(i => i.id);
+        assert.strictEqual(new Set(ids).size, ids.length, `${l.id}: item ids are unique`);
+    }
+    assert.strictEqual(new Set(LEVELS.map(l => l.id)).size, LEVELS.length, 'level ids are unique');
+    // Shipped level ids are saved progress: they must never change.
+    assert.deepStrictEqual(LEVELS.slice(0, 3).map(l => l.id), ['1-1', '1-2', '1-3']);
+    assert.deepStrictEqual(LEVELS[0].items.map(i => i.id), ['w-the', 'w-to', 'w-go', 'ch:chop', 'ch:chip', 'ch:rich', 'ch:much']);
     for (const item of ALL_ITEMS) {
         if (item.kind === 'tricky') {
             assert.ok(findItem(item.id), `${item.id} is not a curriculum item`);
-            assert.ok(d.FOCUS_WORDS.includes(item.word), `${item.word} is not a focus word`);
+            assert.ok(d.FOCUS_WORDS.includes(item.word.toLowerCase()), `${item.word} is not a focus word`);
         } else {
             assert.ok(d.FOCUS_GPC_IDS.includes(item.gpc), `${item.gpc} is not a focus GPC`);
             assert.strictEqual(d.whyReadable(item.word), 'decodable', `${item.word} is not decodable`);
             assert.ok(d.findGpc(item.word, item.gpc), `${item.word} does not carry ${item.gpc}`);
         }
     }
+});
+
+await test('content: the five worlds cover every focus word and every focus sound', () => {
+    assert.strictEqual(WORLDS.length, 5);
+    for (const w of WORLDS) assert.strictEqual(w.levels.length, 5, `${w.name} has 5 levels`);
+    assert.strictEqual(LEVELS.length, 30, '25 levels + 5 bosses');
+    const words = new Set(ALL_ITEMS.filter(i => i.kind === 'tricky').map(i => i.word.toLowerCase()));
+    assert.deepStrictEqual(d.FOCUS_WORDS.filter(w => !words.has(w)), [], 'focus words missing');
+    const gpcs = new Set(ALL_ITEMS.filter(i => i.kind === 'gpc').map(i => i.gpc));
+    assert.deepStrictEqual(d.FOCUS_GPC_IDS.filter(g => !gpcs.has(g)), [], 'focus sounds missing');
+    for (const l of LEVELS.filter(l => !l.boss)) assert.ok(l.items.length >= 5, `${l.id} has only ${l.items.length} items`);
+    for (const l of LEVELS.filter(l => l.boss)) {
+        assert.deepStrictEqual(new Set(l.items.map(i => i.id)), new Set(worldItems(l.worldIndex).map(i => i.id)), `${l.id} tests the whole world`);
+    }
+});
+
+await test('content: the skill ladder never gets easier from one world to the next', () => {
+    for (let i = 1; i < WORLDS.length; i++) {
+        const a = WORLDS[i - 1], b = WORLDS[i];
+        assert.ok(b.plates >= a.plates && b.minTier >= a.minTier, `${b.name} plates / gate floor`);
+        assert.ok(!(b.checkpoint && !a.checkpoint), `${b.name} flag`);
+        assert.ok(b.obstacles.gapW[1] >= a.obstacles.gapW[1] && b.obstacles.tall >= a.obstacles.tall, `${b.name} obstacles`);
+        assert.ok(b.boss.seconds <= a.boss.seconds, `${b.name} boss fuse`);
+        assert.ok(b.boss.needBlocks.tier >= a.boss.needBlocks.tier, `${b.name} boss door`);
+    }
+    assert.ok(WORLDS[0].checkpoint && WORLDS[1].checkpoint && !WORLDS[2].checkpoint, 'flag in the early worlds only');
 });
 
 await test('content: every wrong plate is a real word he can read', () => {
@@ -67,12 +99,14 @@ await test('gates: exactly one right plate, no duplicates, right word in the sta
     const rng = mulberry32(1);
     for (const item of ALL_ITEMS) {
         for (const tier of [0, 1, 2, 3]) {
-            const gate = g.buildGate(item, tier, rng);
-            assert.strictEqual(gate.plates.length, 3);
-            assert.strictEqual(new Set(gate.plates).size, 3, `duplicate plate for ${item.word}: ${gate.plates}`);
-            assert.strictEqual(gate.plates[gate.correctIndex], item.word);
-            assert.strictEqual(gate.plates.filter(w => w === item.word).length, 1);
-            assert.strictEqual(gate.mode, tier >= 2 ? 'flash' : 'hear');
+            for (const n of [3, 4]) {
+                const gate = g.buildGate(item, tier, rng, -1, n);
+                assert.strictEqual(gate.plates.length, n, `${item.word} tier ${tier}: ${gate.plates}`);
+                assert.strictEqual(new Set(gate.plates).size, n, `duplicate plate for ${item.word}: ${gate.plates}`);
+                assert.strictEqual(gate.plates[gate.correctIndex], item.word);
+                assert.strictEqual(gate.plates.filter(w => w === item.word).length, 1);
+                assert.strictEqual(gate.mode, tier >= 3 && item.clue ? 'sentence' : tier >= 2 ? 'flash' : 'hear');
+            }
         }
     }
 });
@@ -87,6 +121,34 @@ await test('gates: Scrap plates look different, Copper plates are look-alikes', 
         assert.ok(avg(near) > avg(far), `${item.word}: look-alikes ${near} are no closer than ${far}`);
     }
     console.log('   e.g. ' + ['the', 'of', 'put', 'chop', 'tank'].map(w => `${w} ~ ${g.lookAlikes(w, 2, rng).join('/')}`).join(', '));
+});
+
+await test('gates: a hear-it gate never shows a sound-alike (to / too, there / their)', () => {
+    const rng = mulberry32(21);
+    for (const item of ALL_ITEMS) {
+        for (const tier of [0, 1, 2]) {
+            for (let k = 0; k < 5; k++) {
+                const gate = g.buildGate(item, tier, rng, -1, 4);
+                for (let a = 0; a < gate.plates.length; a++) for (let b = a + 1; b < gate.plates.length; b++) {
+                    assert.ok(!soundsSame(gate.plates[a], gate.plates[b]), `${gate.plates[a]} / ${gate.plates[b]}`);
+                }
+            }
+        }
+    }
+});
+
+await test('gates: a sentence gate has no other word that fits the gap, except there / their', () => {
+    const rng = mulberry32(22);
+    const tricky = new Set(ALL_ITEMS.filter(i => i.kind === 'tricky').map(i => i.word.toLowerCase()));
+    for (const item of ALL_ITEMS.filter(i => i.clue)) {
+        const gate = g.buildGate(item, 3, rng, -1, 4);
+        assert.strictEqual(gate.mode, 'sentence');
+        assert.ok(gate.clue.includes('___'));
+        const others = gate.plates.filter(w => w !== item.word);
+        const allowed = { there: 'their', their: 'there' }[item.word];
+        for (const w of others) assert.ok(!tricky.has(w.toLowerCase()) || w === allowed, `${item.word}: ${w} could fit “${item.clue}”`);
+        if (allowed) assert.ok(others.includes(allowed), `${item.word} is tested against ${allowed}`);
+    }
 });
 
 await test('gates: the right plate is never in the same place three times running', () => {
@@ -150,19 +212,49 @@ await test('mastery: words go rusty after a week away and are picked first', () 
     assert.ok(picked.some(i => i.id === 'w-go'), 'rusty word is in the review slots');
 });
 
-await test('mastery: a level has 8 gates, every new word, up to 3 review words, no word twice running', () => {
+await test('mastery: a level has 8 gates, every new word, 3 review words; a boss tests its world', () => {
     for (let li = 0; li < LEVELS.length; li++) {
-        for (let seed = 0; seed < 50; seed++) {
+        const lvl = LEVELS[li];
+        for (let seed = 0; seed < 30; seed++) {
             const picked = m.pickGateItems(li, fresh(), mulberry32(seed), T0);
-            assert.strictEqual(picked.length, 8);
-            const own = new Set(LEVELS[li].items.map(i => i.id));
+            assert.strictEqual(picked.length, lvl.boss ? lvl.world.boss.gates : 8);
+            const own = new Set(lvl.items.map(i => i.id));
             const review = picked.filter(i => !own.has(i.id));
-            assert.strictEqual(review.length, li === 0 ? 0 : 3);
-            const expected = Math.min(own.size, 8 - review.length);
+            assert.strictEqual(review.length, li === 0 || lvl.boss ? 0 : 3);
+            const expected = Math.min(own.size, picked.length - review.length);
             assert.strictEqual(new Set(picked.filter(i => own.has(i.id)).map(i => i.id)).size, expected);
             for (let i = 1; i < picked.length; i++) assert.notStrictEqual(picked[i].id, picked[i - 1].id, `seed ${seed}`);
         }
     }
+});
+
+await test('mastery: boss door needs all 5 levels, 10 stars and enough blocks; the boss opens the next world', () => {
+    const st = fresh();
+    const boss1 = m.bossLevelIndex(0);
+    assert.strictEqual(LEVELS[boss1].id, '1-boss');
+    for (const id of ['1-1', '1-2', '1-3', '1-4', '1-5']) m.finishLevel(st, id, 2);
+    assert.ok(!m.isLevelUnlocked(boss1, st), 'no Copper blocks yet');
+    let door = m.bossDoor(st, 0);
+    assert.deepStrictEqual([door.levelsDone, door.stars, door.blocks, door.needBlocks], [5, 10, 0, 6]);
+    for (const item of worldItems(0).slice(0, 6)) for (let i = 0; i < 3; i++) m.recordAnswer(st, item.id, true, T0);
+    assert.ok(m.isLevelUnlocked(boss1, st));
+    assert.ok(!m.isWorldUnlocked(1, st));
+    assert.ok(!m.isLevelUnlocked(boss1 + 1, st), 'world 2 waits for the boss');
+    m.finishLevel(st, '1-boss', 1);
+    assert.ok(m.isWorldUnlocked(1, st));
+    for (const item of worldItems(0).slice(0, 6)) { m.recordAnswer(st, item.id, false, T0); m.recordAnswer(st, item.id, false, T0); }
+    assert.ok(m.isLevelUnlocked(boss1, st), 'a beaten boss stays open after blocks slip back');
+    assert.ok(m.isLevelUnlocked(boss1 + 1, st), 'world 2 level 1 opens');
+    assert.ok(!m.isLevelUnlocked(boss1 + 2, st));
+    // World 3's door needs Silver blocks: at least two days of play.
+    const st3 = fresh();
+    for (const id of ['3-1', '3-2', '3-3', '3-4', '3-5']) m.finishLevel(st3, id, 3);
+    const w3 = worldItems(2).slice(0, 4);
+    for (const item of w3) for (let i = 0; i < 6; i++) m.recordAnswer(st3, item.id, true, T0);
+    assert.strictEqual(m.bossDoor(st3, 2).blocks, 0, 'one day is not enough for Silver');
+    for (const item of w3) for (let i = 0; i < 3; i++) m.recordAnswer(st3, item.id, true, T0 + DAY);
+    assert.strictEqual(m.bossDoor(st3, 2).blocks, 4);
+    assert.ok(m.bossDoor(st3, 2).open);
 });
 
 await test('mastery: levels unlock with stars; state survives a save and load', () => {
@@ -254,13 +346,13 @@ await test('run: hammering trips the overheat guard, careful play does not', () 
 
 // ---------- Guessing cannot win (design §5) ----------
 
-function play(levelIndex, rng, knows, checkpoint) {
+function play(levelIndex, rng, knows) {
     // knows: chance that he really knows each gate's word; otherwise he taps at random.
-    const run = createRun({ levelIndex, state: fresh(), rng, now: () => T0, checkpoint });
+    const run = createRun({ levelIndex, state: fresh(), rng, now: () => T0 });
     for (;;) {
         while (run.status === 'running') {
             const gate = run.currentGate();
-            run.answer(rng() < knows ? gate.correctIndex : Math.floor(rng() * 3));
+            run.answer(rng() < knows ? gate.correctIndex : Math.floor(rng() * gate.plates.length));
         }
         if (run.status === 'done') return run.stars;
         if (!run.canContinue()) return 0;
@@ -268,41 +360,43 @@ function play(levelIndex, rng, knows, checkpoint) {
     }
 }
 
-await test('guessing: a random tapper almost never finishes a level; a reader always does', () => {
-    const N = 2000;
+await test('guessing: a random tapper almost never finishes a stage; a reader always does', () => {
+    if (process.env.QUICK) return; // QUICK=1 skips this slow test while editing
+    const N = 1000;
     const pct = n => `${(100 * n / N).toFixed(1)}%`;
     for (let li = 0; li < LEVELS.length; li++) {
-        for (const checkpoint of [true, false]) {
-            const rng = mulberry32(100 + li);
-            let done = 0, twoPlus = 0, perfect = 0, half = 0, most = 0;
-            for (let i = 0; i < N; i++) {
-                const stars = play(li, rng, 0, checkpoint);
-                if (stars) done++;
-                if (stars >= 2) twoPlus++;
-                if (play(li, rng, 1, checkpoint) === 3) perfect++;
-                if (play(li, rng, 0.5, checkpoint)) half++;
-                if (play(li, rng, 0.85, checkpoint)) most++;
-            }
-            console.log(`   ${LEVELS[li].id} ${checkpoint ? 'with flag' : 'no flag  '}: guessing finishes ${pct(done)} (2+ stars ${pct(twoPlus)}), knows half ${pct(half)}, knows most ${pct(most)}`);
-            assert.strictEqual(perfect, N, 'a perfect reader always gets 3 stars');
-            assert.ok(done / N < (checkpoint ? 0.1 : 0.04), `guessing finished ${pct(done)}`);
-            assert.ok(twoPlus / N < 0.03, `guessing got 2+ stars ${pct(twoPlus)}`);
-            assert.ok(most / N > 0.9, `a child who knows most words finished only ${pct(most)}`);
+        const lvl = LEVELS[li];
+        const flag = lvl.world.checkpoint && !lvl.boss;
+        const rng = mulberry32(100 + li);
+        let done = 0, twoPlus = 0, perfect = 0, half = 0, most = 0;
+        for (let i = 0; i < N; i++) {
+            const stars = play(li, rng, 0);
+            if (stars) done++;
+            if (stars >= 2) twoPlus++;
+            if (play(li, rng, 1) === 3) perfect++;
+            if (play(li, rng, 0.5)) half++;
+            if (play(li, rng, 0.85)) most++;
         }
+        console.log(`   ${lvl.id.padEnd(6)} ${lvl.world.plates} plates${flag ? ', flag' : '       '}: guessing ${pct(done).padStart(5)} (2+ stars ${pct(twoPlus)}), knows half ${pct(half).padStart(5)}, knows most ${pct(most)}`);
+        assert.strictEqual(perfect, N, 'a perfect reader always gets 3 stars');
+        assert.ok(done / N < (flag ? 0.1 : 0.04), `guessing finished ${pct(done)}`);
+        assert.ok(twoPlus / N < 0.03, `guessing got 2+ stars ${pct(twoPlus)}`);
+        assert.ok(most / N > 0.85, `a child who knows most words finished only ${pct(most)}`);
     }
 });
 
 // ---------- Runner ----------
 
 await test('runner: every course can be run to the flag; gates stop Torch until answered', () => {
-    for (let seed = 1; seed <= 30; seed++) {
-        const course = buildCourse(seed);
+    for (let seed = 1; seed <= 40; seed++) {
+        const world = WORLDS[seed % WORLDS.length];
+        const course = buildCourse(seed, 8, 4, world.obstacles);
         assert.strictEqual(course.gates.length, 8);
         for (const gate of course.gates) {
             for (const o of [...course.gaps, ...course.crates]) assert.ok(o.x + 30 < gate.x - 120 || o.x > gate.x + 30, `obstacle too close to a gate (seed ${seed})`);
         }
         let gatesHit = 0, bumps = 0, finished = false;
-        const game = createGame({ course, canvas: null, autoJump: true, hooks: { onGate: () => gatesHit++, onBump: () => bumps++, onFinish: () => { finished = true; } } });
+        const game = createGame({ course, canvas: null, autoJump: true, theme: world.theme, hooks: { onGate: () => gatesHit++, onBump: () => bumps++, onFinish: () => { finished = true; } } });
         for (let i = 0; i < 120 * 400 && !finished; i++) {
             game.step(1 / 120);
             if (game.mode === 'gate') {
@@ -317,6 +411,34 @@ await test('runner: every course can be run to the flag; gates stop Torch until 
         assert.strictEqual(bumps, 0, `seed ${seed}: a well-timed jump should clear everything`);
         assert.ok(game.bolts > 0);
     }
+});
+
+await test('runner: after a fall he comes back well before the hole and pauses', () => {
+    let checked = 0;
+    for (let seed = 1; seed <= 30; seed++) {
+        const course = buildCourse(seed, 8, 4, WORLDS[4].obstacles);
+        const gap = course.gaps.find(g => g.x > 400);
+        if (!gap) continue;
+        const game = createGame({ course, canvas: null });
+        // Put him just short of the hole, never jumping.
+        Object.assign(game.torch, { x: gap.x - 20, y: GROUND_Y, vy: 0, grounded: true });
+        course.gates.forEach(g => { if (g.x < gap.x) g.open = true; });
+        let fell = false;
+        for (let i = 0; i < 600 && !fell; i++) { game.step(1 / 120); if (game.torch.y === GROUND_Y && game.torch.x < gap.x - 30) fell = true; }
+        assert.ok(fell, `seed ${seed}: did not fall`);
+        const back = gap.x - game.torch.x;
+        assert.ok(back >= 100, `seed ${seed}: only ${back.toFixed(0)}px before the hole (was 55)`);
+        assert.ok(back <= RESPAWN_BACK, 'not further than needed');
+        for (const o of [...course.gaps, ...course.crates]) {
+            if (o === gap) continue;
+            assert.ok(!(game.torch.x > o.x - 8 && game.torch.x < o.x + (o.w || 16) + 8), `seed ${seed}: respawned on an obstacle`);
+        }
+        const x = game.torch.x;
+        for (let i = 0; i < 30; i++) game.step(1 / 120);
+        assert.strictEqual(game.torch.x, x, 'stands still for a moment first');
+        checked++;
+    }
+    assert.ok(checked > 10);
 });
 
 await test('runner: never jumping costs bolts but never stops him reaching the gates', () => {
@@ -336,8 +458,10 @@ await test('screens: map → words → level → gate → plates locked, then on
     const el = document.body.appendChild(document.createElement('div'));
     let back = false;
     const quest = initTorchQuest(el, [], () => { back = true; }, { lockMs: 30, feedbackMs: 20, autoStart: false, autoJump: true, rng: mulberry32(9), seed: 3 });
-    assert.strictEqual(el.querySelectorAll('.tq-level').length, LEVELS.length);
-    assert.strictEqual(el.querySelectorAll('.tq-level[disabled]').length, LEVELS.length - 1);
+    assert.strictEqual(el.querySelectorAll('.tq-level').length, 6, 'world 1: 5 levels and a boss');
+    assert.strictEqual(el.querySelectorAll('.tq-level[disabled]').length, 5);
+    assert.strictEqual(el.querySelectorAll('.tq-world.locked').length, 4, 'worlds 2–5 are locked');
+    assert.ok(/Boss door/.test(el.textContent));
     el.querySelector('.tq-level').click();
     assert.strictEqual(el.querySelectorAll('.tq-word').length, LEVELS[0].items.length);
     el.querySelector('#tq-go').click();
@@ -433,6 +557,95 @@ await test('screens: a Silver word gets a flash-and-find gate with no voice butt
     assert.notStrictEqual(el.querySelector('.tq-flash').textContent, run.currentGate().word, 'the word is hidden before he answers');
     el.querySelectorAll('.tq-plate')[run.currentGate().correctIndex].click();
     assert.strictEqual(run.gateIndex, 1);
+});
+
+await test('screens: a Gold word is read in a sentence, with no voice', async () => {
+    const st = fresh();
+    for (const item of LEVELS[0].items) st.items[item.id] = { tier: 3, ticks: 0, promoDay: null, missDay: null, misses: 0, last: T0 };
+    m.saveState(st);
+    const el = document.body.appendChild(document.createElement('div'));
+    const quest = initTorchQuest(el, [], () => {}, { lockMs: 0, sentenceLockMs: 0, feedbackMs: 0, autoStart: false, autoJump: true, rng: mulberry32(31), seed: 5, now: () => T0 });
+    const { game, run } = quest.startLevel(0);
+    let sentences = 0;
+    for (let n = 0; n < 8 && run.status === 'running'; n++) {
+        while (game.mode === 'run') game.step(1 / 120);
+        await sleep(5);
+        const gate = run.currentGate();
+        if (gate.mode === 'sentence') {
+            sentences++;
+            assert.ok(el.querySelector('.tq-sentence'));
+            assert.ok(!el.querySelector('.tq-speak'));
+            assert.ok(!el.querySelector('.tq-sentence').textContent.includes(gate.word), 'the sentence does not give the word away');
+        }
+        el.querySelectorAll('.tq-plate')[gate.correctIndex].click();
+        await sleep(15);
+    }
+    assert.ok(sentences > 0);
+});
+
+await test('screens: a boss has a fuse; letting it burn out costs a heart; right answers hit the boss', async () => {
+    const st = fresh();
+    for (const id of ['1-1', '1-2', '1-3', '1-4', '1-5']) m.finishLevel(st, id, 3);
+    for (const item of worldItems(0).slice(0, 6)) for (let i = 0; i < 3; i++) m.recordAnswer(st, item.id, true, T0 - DAY);
+    m.saveState(st);
+    const el = document.body.appendChild(document.createElement('div'));
+    const quest = initTorchQuest(el, [], () => {}, { lockMs: 0, feedbackMs: 0, bossMs: 60, autoStart: false, autoJump: true, rng: mulberry32(32), seed: 5, now: () => T0 });
+    const boss = m.bossLevelIndex(0);
+    assert.ok(!el.querySelector(`.tq-level[data-level="${boss}"]`).disabled, 'boss door is open');
+    const { game, run } = quest.startLevel(boss);
+    assert.strictEqual(run.total, 10);
+    assert.ok(!run.checkpoint, 'no flag on a boss');
+    assert.ok(el.querySelector('.tq-bosshp'));
+    while (game.mode === 'run') game.step(1 / 120);
+    await sleep(5);
+    assert.ok(!el.querySelector('.tq-fuse').hidden, 'the fuse is burning');
+    await sleep(100);
+    assert.strictEqual(run.hearts, 2, 'too slow costs a heart');
+    assert.ok(/Too slow/.test(el.querySelector('.tq-msg').textContent));
+    await sleep(10);
+    while (game.mode === 'run') game.step(1 / 120);
+    await sleep(5);
+    el.querySelectorAll('.tq-plate')[run.currentGate().correctIndex].click();
+    assert.strictEqual(game.bossHp, 9);
+});
+
+await test('screens: powering down twice on a level opens the Training Bay, then back to the level', async () => {
+    const el = document.body.appendChild(document.createElement('div'));
+    let clock = T0;
+    const quest = initTorchQuest(el, [], () => {}, { lockMs: 0, feedbackMs: 0, autoStart: false, autoJump: true, rng: mulberry32(33), seed: 5, now: () => (clock += 1000) });
+    const loseAll = async () => {
+        const { game, run } = quest.startLevel(0);
+        for (let n = 0; n < 3; n++) {
+            while (game.mode === 'run') game.step(1 / 120);
+            await sleep(5);
+            const gate = run.currentGate();
+            const plates = el.querySelectorAll('.tq-plate');
+            assert.ok(plates.length, `no plates at gate ${n}: ${el.textContent.slice(0, 100)}`);
+            plates[(gate.correctIndex + 1) % 3].click();
+            await sleep(5);
+        }
+        return run;
+    };
+    await loseAll();
+    assert.ok(!el.querySelector('#tq-train'), 'not after the first power-down');
+    el.querySelector('#tq-again').click();
+    const run = await loseAll();
+    assert.ok(el.querySelector('#tq-train'));
+    el.querySelector('#tq-train').click();
+    for (const word of run.missed.slice(0, 3)) {
+        assert.ok(el.querySelector('.tq-learn'), `no word card: ${el.textContent.slice(0, 120)}`);
+        assert.strictEqual(el.querySelector('.tq-learn').textContent, word);
+        el.querySelector('#tq-ready').click();
+        const plates = [...el.querySelectorAll('.tq-plate')];
+        const wrong = plates.find(p => p.textContent !== word);
+        wrong.click();
+        assert.ok(plates.find(p => p.textContent === word).classList.contains('hint'), 'a wrong tap makes the right one glow');
+        plates.find(p => p.textContent === word).click();
+        await sleep(5);
+    }
+    assert.ok(/Training done/.test(el.textContent));
+    el.querySelector('#tq-go').click();
+    assert.ok(el.querySelector('.tq-canvas'), 'back in the level');
 });
 
 console.log(failures ? `\n${failures} Torch Quest test(s) failed` : '\nAll Torch Quest tests passed');

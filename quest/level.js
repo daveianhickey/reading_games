@@ -13,7 +13,10 @@ export function mulberry32(seed) {
     };
 }
 
-export function buildCourse(seed, gateCount = 8, checkpointAfter = 4) {
+// obstacles (per world): gapW [min, max] gap width, tall: chance a crate is a double stack.
+export function buildCourse(seed, gateCount = 8, checkpointAfter = 4, obstacles = {}) {
+    const [gapMin, gapMax] = obstacles.gapW || [30, 30];
+    const tall = obstacles.tall || 0;
     const rng = mulberry32(seed);
     const gaps = [], crates = [], bolts = [], gates = [];
     const bolt = (x, y) => bolts.push({ x, y, taken: false });
@@ -25,12 +28,14 @@ export function buildCourse(seed, gateCount = 8, checkpointAfter = 4) {
             x += 150 + rng() * 70;
             const r = rng();
             if (r < 0.3) {
-                gaps.push({ x, w: 30 });
-                bolt(x - 4, GROUND_Y - 34); bolt(x + 15, GROUND_Y - 46); bolt(x + 34, GROUND_Y - 34);
-                x += 30;
+                const w = Math.round(gapMin + rng() * (gapMax - gapMin));
+                gaps.push({ x, w });
+                bolt(x - 4, GROUND_Y - 34); bolt(x + w / 2, GROUND_Y - 46); bolt(x + w + 4, GROUND_Y - 34);
+                x += w;
             } else if (r < 0.6) {
-                crates.push({ x });
-                bolt(x + 8, GROUND_Y - 46);
+                const h = rng() < tall ? 32 : 16;
+                crates.push({ x, h });
+                bolt(x + 8, GROUND_Y - h - 30);
                 x += 16;
             } else if (r < 0.8) {
                 for (let i = 0; i < 4; i++) bolt(x + i * 18, GROUND_Y - 10);

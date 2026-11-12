@@ -9,7 +9,6 @@ const YEAR1_GAMES = [
   { id: 'iron-rig', load: () => import('./games/year1/iron-rig.js'), init: 'initIronRig', icon: '🏋️', name: 'Iron Rig', blurb: 'Match sounds to power up the robot!', color: '#E67E22' },
   { id: 'rocket-bay', load: () => import('./games/year1/rocket-bay.js'), init: 'initRocketBay', icon: '🚀', name: 'Rocket Bay', blurb: 'Build a rocket and blast off!', color: '#3867d6' },
   { id: 'bot-snap', load: () => import('./games/year1/bot-snap.js'), init: 'initBotSnap', icon: '🤖', name: 'Bot Snap', blurb: 'SNAP the words to fix the robot!', color: '#20bf6b' },
-  { id: 'orbit', load: () => import('./games/year1/orbit-defense.js'), init: 'initOrbitDefense', icon: '🛡️', name: 'Orbit Defender', blurb: 'Shield the moon base!', color: '#8854d0' },
   { id: 'mech', load: () => import('./games/year1/mech-builder.js'), init: 'initMechBuilder', icon: '🦾', name: 'Mech Builder', blurb: 'Forge armour for your mech!', color: '#c0392b' },
   { id: 'goat-boat', load: () => import('./games/year1/goat-boat.js'), init: 'initGoatBoat', icon: '🐐', name: 'Goat Boat', blurb: "Read and write 'oa' words to sail to the castle!", color: '#0984e3' }
 ];
@@ -138,14 +137,6 @@ function renderGameHub() {
         <button class="btn btn-secondary" style="width: 100%; border-color: #FFE66D; box-shadow: 0 4px 0 #F39C12;">Play Now</button>
       </div>
 
-      <!-- Sound Spotter Game Card -->
-      <div class="glass-card" style="text-align: center; cursor: pointer; animation: popIn 0.5s ease-out 0.4s both; display: flex; flex-direction: column; align-items: center;" id="game-sound-spotter">
-        <div style="font-size: 5rem; margin-bottom: 1rem; animation: float 3s ease-in-out infinite 1.5s;">🕵️</div>
-        <h2 style="color: #8E44AD; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);">Sound Spotter</h2>
-        <p style="font-size: 1.2rem; margin-bottom: 1.5rem; font-weight: 600;">Find digraphs & trigraphs in sentences!</p>
-        <button class="btn" style="width: 100%; background: #9B59B6; box-shadow: 0 8px 0 #8E44AD;">Play Now</button>
-      </div>
-
     </div>
 
     ${words.length >= 3 ? renderYear1Section() : ''}
@@ -170,9 +161,6 @@ function renderGameHub() {
       startRocketRace();
   });
   
-  document.getElementById('game-sound-spotter').addEventListener('click', () => {
-      startSoundSpotter();
-  });
 }
 
 function startBubblePop() {
@@ -199,16 +187,6 @@ function startRocketRace() {
     if (words.length < 3) return renderParentSetup();
     import('./games/rocket-race.js').then(module => {
         module.initRocketRace(appContainer, words, renderGameHub);
-    }).catch(err => {
-        console.error("Failed to load game", err);
-        alert("Game is still being built!");
-    });
-}
-
-function startSoundSpotter() {
-    if (words.length < 3) return renderParentSetup();
-    import('./games/sound-spotter.js').then(module => {
-        module.initSoundSpotter(appContainer, words, renderGameHub);
     }).catch(err => {
         console.error("Failed to load game", err);
         alert("Game is still being built!");

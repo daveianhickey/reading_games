@@ -1,6 +1,6 @@
 // Torch Quest word mastery (pure logic). See docs/torch-quest-design.md §6.
 // Saved in localStorage under `y1Quest` (this browser on this device only).
-import { LEVELS } from './content.js';
+import { LEVELS, WORLDS, worldItems } from './content.js';
 
 const KEY = 'y1Quest';
 export const TIERS = ['Scrap', 'Copper', 'Silver', 'Gold'];
@@ -87,14 +87,23 @@ function shuffled(list, rng) {
     return a;
 }
 
-// The 8 gate items for a level: mostly its new words, up to 3 from earlier levels (weakest first).
+// The gate items for a stage. A level: mostly its new words, up to 3 from earlier levels
+// (weakest and rustiest first). A boss: the world's weakest words, every one at least once
+// if there is room.
 export function pickGateItems(levelIndex, state, rng = Math.random, now = Date.now()) {
-    const fresh = LEVELS[levelIndex].items;
-    const earlier = LEVELS.slice(0, levelIndex).flatMap(l => l.items);
-    const review = shuffled(earlier, rng).sort(weakness(state, now)).slice(0, 3);
-    const need = GATES_PER_LEVEL - review.length;
+    const lvl = LEVELS[levelIndex];
+    const count = lvl.gates || GATES_PER_LEVEL;
+    const fresh = lvl.items;
+    const freshIds = new Set(fresh.map(i => i.id));
+    let review = [];
+    if (!lvl.boss) {
+        const seen = new Set(freshIds);
+        const earlier = LEVELS.slice(0, levelIndex).flatMap(l => l.items).filter(i => !seen.has(i.id) && seen.add(i.id));
+        review = shuffled(earlier, rng).sort(weakness(state, now)).slice(0, 3);
+    }
+    const need = count - review.length;
     // Each new word at least once where there is room, then the weakest again.
-    let chosen = shuffled(fresh, rng).sort(weakness(state, now)).slice(0, need);
+    const chosen = shuffled(fresh, rng).sort(weakness(state, now)).slice(0, need);
     const byWeakness = [...chosen];
     while (chosen.length < need) chosen.push(byWeakness[(chosen.length - byWeakness.length) % byWeakness.length]);
     // No word twice in a row: reshuffle until that holds (a handful of tries at most).
@@ -105,14 +114,54 @@ export function pickGateItems(levelIndex, state, rng = Math.random, now = Date.n
     return all;
 }
 
+const stars = (state, id) => state.levels[id]?.stars || 0;
+
 export function totalStars(state) {
-    return LEVELS.reduce((n, l) => n + (state.levels[l.id]?.stars || 0), 0);
+    return LEVELS.reduce((n, l) => n + stars(state, l.id), 0);
+}
+
+// Stars from a world's five levels (the boss's stars are not counted towards its own door).
+export function worldStars(state, worldIndex) {
+    return LEVELS.filter(l => l.worldIndex === worldIndex && !l.boss).reduce((n, l) => n + stars(state, l.id), 0);
+}
+
+export function blocksAtTier(state, worldIndex, tier) {
+    return worldItems(worldIndex).filter(i => itemState(state, i.id).tier >= tier).length;
+}
+
+export function bossLevelIndex(worldIndex) {
+    return LEVELS.findIndex(l => l.worldIndex === worldIndex && l.boss);
+}
+
+export function isWorldUnlocked(worldIndex, state) {
+    return worldIndex === 0 || stars(state, LEVELS[bossLevelIndex(worldIndex - 1)].id) >= 1;
+}
+
+// What the boss door asks for, and how far he has got.
+export function bossDoor(state, worldIndex) {
+    const boss = WORLDS[worldIndex].boss;
+    const levels = LEVELS.filter(l => l.worldIndex === worldIndex && !l.boss);
+    const door = {
+        levelsDone: levels.filter(l => stars(state, l.id) >= 1).length,
+        levels: levels.length,
+        stars: worldStars(state, worldIndex),
+        needStars: boss.needStars,
+        blocks: blocksAtTier(state, worldIndex, boss.needBlocks.tier),
+        needBlocks: boss.needBlocks.count,
+        tier: boss.needBlocks.tier
+    };
+    door.open = door.levelsDone === door.levels && door.stars >= door.needStars && door.blocks >= door.needBlocks;
+    return door;
 }
 
 export function isLevelUnlocked(levelIndex, state) {
-    if (levelIndex === 0) return true;
+    const lvl = LEVELS[levelIndex];
+    if (!isWorldUnlocked(lvl.worldIndex, state)) return false;
+    // Once beaten, a boss stays open even if a block later slips back a step.
+    if (lvl.boss) return stars(state, lvl.id) >= 1 || bossDoor(state, lvl.worldIndex).open;
     const prev = LEVELS[levelIndex - 1];
-    return (state.levels[prev.id]?.stars || 0) >= 1 && totalStars(state) >= LEVELS[levelIndex].needStars;
+    if (!prev || prev.worldIndex !== lvl.worldIndex) return true;
+    return stars(state, prev.id) >= 1 && worldStars(state, lvl.worldIndex) >= lvl.needStars;
 }
 
 export function finishLevel(state, levelId, stars, bolts = 0) {
