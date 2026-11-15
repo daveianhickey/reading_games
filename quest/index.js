@@ -1,11 +1,12 @@
 // Torch Quest: screens (map, level, power-down, flag) and the word-gate plates.
 // Design: docs/torch-quest-design.md. Rules live in run.js / mastery.js / gates.js;
 // the scrolling game is runner.js. Plates are real buttons laid over the canvas.
-import { say, sfx } from '../phonics/engine.js';
+import { say, sfx, unlockSticker } from '../phonics/engine.js';
+import { rollCrate, STICKER_FALLBACK_BOLTS } from './rewards.js';
 import { LEVELS, WORLDS, worldItems } from './content.js';
 import { loadState, saveState, itemState, isRusty, inForge, isLevelUnlocked, isWorldUnlocked, bossDoor, worldStars, totalStars, finishLevel, failLevel, TIERS, TICKS_TO_PROMOTE } from './mastery.js';
 import { unlikeWords } from './gates.js';
-import { createRun, createTapGuard, MAX_HEARTS, CHECKPOINT_AFTER } from './run.js';
+import { createRun, createTapGuard, MAX_HEARTS, CHECKPOINT_AFTER, TURBO_STREAK } from './run.js';
 import { buildCourse } from './level.js';
 import { createGame, VIEW } from './runner.js';
 
@@ -19,6 +20,7 @@ const CSS = `
 .tq-hud { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 2cqw; padding: 1.5cqw 2cqw; font-size: 4cqw; font-weight: 800; pointer-events: none; text-shadow: 0 2px 0 rgba(0,0,0,.5); }
 .tq-hud button { pointer-events: auto; }
 .tq-x { width: 7cqw; height: 7cqw; min-width: 40px; min-height: 40px; border-radius: 1.5cqw; border: 0; background: rgba(0,0,0,.45); color: #fff; font-size: 3.5cqw; font-weight: 800; cursor: pointer; }
+.tq-hearts { white-space: nowrap; }
 .tq-hearts span { display: inline-block; transition: transform .2s; }
 .tq-hearts .lost { filter: grayscale(1) brightness(.5); transform: scale(.8); }
 .tq-pips { flex: 1; display: flex; justify-content: center; align-items: center; gap: 1cqw; }
@@ -96,6 +98,28 @@ const CSS = `
 .tq-w-storm { background: linear-gradient(120deg, #1a0f2e, #5d318a); }
 .tq-learn { font: 700 14cqw 'Andika', 'Outfit', sans-serif; color: #fff; }
 .tq-plate.hint { box-shadow: 0 0 0 1cqw #ffd23f, 0 1.2cqw 0 #8d8a80; }
+.tq-turbo { position: relative; display: flex; align-items: center; gap: .4cqw; font-size: 3cqw; }
+.tq-turbo i { width: 2cqw; height: 3cqw; border-radius: .5cqw; background: rgba(255,255,255,.2); border: .3cqw solid rgba(0,0,0,.4); }
+.tq-turbo i.on { background: #ffd23f; }
+.tq-turbo.go i { background: #ff7a1a; box-shadow: 0 0 1.2cqw #ffd23f; }
+.tq-turbo b { display: none; position: absolute; left: 0; top: 100%; font-size: 2.4cqw; color: #ffd23f; letter-spacing: .2cqw; }
+.tq-turbo.go b { display: inline; animation: tq-pulse .5s ease-in-out infinite alternate; }
+@keyframes tq-pulse { from { transform: scale(1); } to { transform: scale(1.15); } }
+.tq-anvil { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1cqw; }
+.tq-anvil .tq-block { font-size: 7cqw; min-width: 30cqw; padding: 2cqw 4cqw; transition: background .4s, box-shadow .4s, transform .1s; }
+.tq-anvil .tq-block.hit { transform: translateY(1cqw) scale(.96); }
+.tq-anvil .base { width: 34cqw; height: 4cqw; background: #2a2d48; border-radius: 1cqw 1cqw 0 0; box-shadow: inset 0 .8cqw 0 #59627a; }
+.tq-anvil .tq-block.t1 { box-shadow: 0 0 3cqw #d98b4a; } .tq-anvil .tq-block.t2 { box-shadow: 0 0 3cqw #dfe6ee; }
+.tq-anvil .tq-block.t3 { box-shadow: 0 0 5cqw #ffd23f, 0 0 10cqw #ff7a1a; }
+.tq-hits { font-size: 4cqw; letter-spacing: 1cqw; }
+.tq-spark { position: absolute; left: 50%; top: 40%; width: 1.2cqw; height: 1.2cqw; border-radius: 50%; background: #ffd23f; pointer-events: none; animation: tq-spark .6s ease-out forwards; }
+@keyframes tq-spark { to { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
+.tq-crate { width: 26cqw; height: 22cqw; border: .8cqw solid #6e4520; border-radius: 1.5cqw; background: repeating-linear-gradient(90deg, #b5793a 0 5cqw, #a06a30 5cqw 6cqw);
+  display: flex; align-items: center; justify-content: center; font: 800 10cqw 'Outfit', sans-serif; color: #ffd23f; text-shadow: 0 .6cqw 0 #6e4520; cursor: pointer; animation: tq-wobble 1.2s ease-in-out infinite; }
+@keyframes tq-wobble { 0%, 80%, 100% { transform: rotate(0); } 85% { transform: rotate(-6deg); } 90% { transform: rotate(6deg); } 95% { transform: rotate(-3deg); } }
+.tq-prize { font-size: 14cqw; animation: tq-pop .5s ease-out; }
+@keyframes tq-pop { from { transform: scale(.2) translateY(10cqw); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .tq-crate, .tq-turbo.go b, .tq-prize { animation: none; } .tq-spark { display: none; } }
 .tq-turn { display: none; }
 @media (orientation: portrait) {
   .tq-turn { display: block; }
@@ -317,6 +341,7 @@ export function initTorchQuest(container, words, onBack, opts = {}) {
                 <div class="tq-hud">
                     <button class="tq-x" aria-label="Back to the map">✕</button>
                     <div class="tq-hearts" role="img"></div>
+                    <div class="tq-turbo" role="img"></div>
                     <div class="tq-pips" aria-hidden="true"></div>
                     ${level.boss ? '<div class="tq-bosshp" role="img"></div>' : ''}
                     <div class="tq-bolts">🔩 0</div>
@@ -335,6 +360,11 @@ export function initTorchQuest(container, words, onBack, opts = {}) {
             $('.tq-pips').innerHTML = Array.from({ length: run.total }, (_, i) =>
                 `<span class="tq-pip ${run.results[i] === true ? 'ok' : run.results[i] === false ? 'no' : i === run.gateIndex ? 'now' : ''}"></span>${run.checkpoint && i === CHECKPOINT_AFTER - 1 ? '<span class="tq-pipflag">🚩</span>' : ''}`).join('') + '<span class="tq-pipflag">🏁</span>';
             $('.tq-bolts').textContent = `🔩 ${game ? game.bolts : 0}`;
+            // Turbo meter: one cell per right answer in a row; full = car mode.
+            const charge = Math.min(run.streak, TURBO_STREAK);
+            $('.tq-turbo').className = `tq-turbo ${run.turbo ? 'go' : ''}`;
+            $('.tq-turbo').innerHTML = `⚡${Array.from({ length: TURBO_STREAK }, (_, i) => `<i class="${i < charge ? 'on' : ''}"></i>`).join('')}<b>TURBO</b>`;
+            $('.tq-turbo').setAttribute('aria-label', run.turbo ? 'Turbo on' : `Turbo ${charge} of ${TURBO_STREAK}`);
             if (level.boss && game) {
                 $('.tq-bosshp').innerHTML = `👾 ${Array.from({ length: run.total }, (_, i) => `<i class="${i < game.bossHp ? '' : 'gone'}"></i>`).join('')}`;
                 $('.tq-bosshp').setAttribute('aria-label', `${level.name}: ${game.bossHp} hits left`);
@@ -351,6 +381,7 @@ export function initTorchQuest(container, words, onBack, opts = {}) {
                 onJump: () => sfx.jump(),
                 onBolt: () => { sfx.coin(); hud(); },
                 onBump: () => { sfx.boing(); hud(); },
+                onSmash: () => { sfx.slam(); sfx.coin(); hud(); },
                 onGate: showGate,
                 onFinish: showFinish
             }
@@ -423,9 +454,11 @@ export function initTorchQuest(container, words, onBack, opts = {}) {
                 plates[index].classList.add('right');
                 sfx.lock();
                 if (level.boss) { game.hitBoss(); sfx.zap(); }
-                $('.tq-msg').textContent = res.healed ? '❤️ Heart repaired!' : res.promoted ? `New block: ${res.word} is ${TIERS[res.tier]}!` : '';
-                if (res.healed || res.promoted) sfx.powerUp();
+                $('.tq-msg').textContent = res.turboOn ? '⚡ TURBO! Torch transforms!' : res.healed ? '❤️ Heart repaired!' : res.promoted ? `New block: ${res.word} is ${TIERS[res.tier]}!` : '';
+                if (res.healed || res.promoted || res.turboOn) sfx.powerUp();
+                if (res.turboOn) { game.setTurbo(true); sfx.roar(); }
             } else {
+                if (res.turboOff) game.setTurbo(false); // a miss ends Turbo
                 plates[index]?.classList.add('wrong');
                 plates[res.correctIndex].classList.add('reveal');
                 sfx.thud();
@@ -479,6 +512,7 @@ export function initTorchQuest(container, words, onBack, opts = {}) {
             overlay.querySelector('#tq-train')?.addEventListener('click', () => { failed(); showTraining(levelIndex, run.missed.slice(0, 3)); });
             overlay.querySelector('#tq-flag')?.addEventListener('click', () => {
                 run.continueFromCheckpoint();
+                game.setTurbo(false);
                 overlay.hidden = true;
                 game.toCheckpoint(CHECKPOINT_AFTER);
                 hud();
@@ -490,6 +524,93 @@ export function initTorchQuest(container, words, onBack, opts = {}) {
             finishLevel(state, level.id, run.stars, game.bolts);
             saveState(state);
             sfx.fanfare();
+            // Flag → the Forge (any block that went up) → mystery crate → results.
+            const promoted = run.promoted.filter((p, i, all) => all.findIndex(q => q.word === p.word) === i);
+            showForge(promoted, () => showCrate(showResults));
+        }
+
+        // The Forge: he hammers each new block into its metal (design §13b).
+        function showForge(list, done) {
+            if (!list.length) return done();
+            overlay.hidden = false;
+            let k = 0;
+            const next = () => {
+                if (k >= list.length) return done();
+                const { word, tier } = list[k++];
+                let hits = 0;
+                overlay.innerHTML = `
+                    <h2>🔥 The Forge</h2>
+                    <div class="tq-anvil"><div class="tq-block t${tier - 1}">${word}</div><div class="base"></div></div>
+                    <div class="tq-hits" aria-hidden="true">🔨🔨🔨</div>
+                    <div class="tq-row"><button class="tq-btn" id="tq-hammer">🔨 Hammer!</button></div>`;
+                const block = overlay.querySelector('.tq-block');
+                const anvil = overlay.querySelector('.tq-anvil');
+                const hammer = () => {
+                    if (hits >= 3) return;
+                    hits++;
+                    tier >= 3 ? sfx.slam() : sfx.clink();
+                    block.classList.add('hit');
+                    later(() => block.classList.remove('hit'), 100);
+                    sparks(anvil, tier >= 3 ? 16 : 8);
+                    overlay.querySelector('.tq-hits').textContent = '🔨'.repeat(3 - hits) + '✨'.repeat(hits);
+                    if (hits < 3) return;
+                    // Done: the block takes its new metal and the word is said once more.
+                    block.className = `tq-block t${tier}`;
+                    tier >= 3 ? sfx.fanfare() : sfx.powerUp();
+                    if (tier >= 2) sparks(anvil, 24);
+                    say(`${word}! ${TIERS[tier]}!`);
+                    overlay.querySelector('h2').textContent = `${word} is ${TIERS[tier]}!`;
+                    overlay.querySelector('.tq-row').innerHTML = '<button class="tq-btn" id="tq-forged">Next ▶</button>';
+                    overlay.querySelector('#tq-forged').addEventListener('click', next);
+                };
+                overlay.querySelector('#tq-hammer').addEventListener('click', hammer);
+                block.addEventListener('click', hammer);
+            };
+            next();
+        }
+
+        function sparks(host, n) {
+            for (let i = 0; i < n; i++) {
+                const sp = document.createElement('span');
+                sp.className = 'tq-spark';
+                const a = (Math.PI * 2 * i) / n + rng() * 0.5;
+                sp.style.setProperty('--dx', `${Math.cos(a) * (10 + rng() * 14)}cqw`);
+                sp.style.setProperty('--dy', `${Math.sin(a) * (6 + rng() * 10) - 4}cqw`);
+                if (i % 3 === 0) sp.style.background = '#ff7a1a';
+                host.appendChild(sp);
+                later(() => sp.remove(), 700);
+            }
+        }
+
+        // Mystery crate at every flag: bolts, a big bolt pile, or a sticker (design §13b).
+        function showCrate(done) {
+            overlay.hidden = false;
+            overlay.innerHTML = `
+                <h2>Mystery crate!</h2>
+                <button class="tq-crate" id="tq-crate" aria-label="Open the mystery crate">?</button>
+                <p>Tap to open</p>`;
+            overlay.querySelector('#tq-crate').addEventListener('click', () => {
+                const prize = rollCrate({ stars: run.stars, boss: level.boss, rng });
+                let show, text;
+                if (prize.kind === 'sticker') {
+                    const sticker = unlockSticker();
+                    if (sticker) { show = sticker; text = 'A new sticker!'; }
+                    else { prize.amount = STICKER_FALLBACK_BOLTS; show = '🔩'; text = `+${prize.amount} bolts!`; }
+                } else {
+                    show = prize.big ? '🔩🔩🔩' : '🔩';
+                    text = `+${prize.amount} bolts!`;
+                }
+                if (prize.amount) { state.bolts = (state.bolts || 0) + prize.amount; saveState(state); }
+                prize.big || prize.kind === 'sticker' ? sfx.fanfare() : sfx.coin();
+                overlay.innerHTML = `
+                    <h2>${text}</h2>
+                    <div class="tq-prize">${show}</div>
+                    <div class="tq-row"><button class="tq-btn" id="tq-continue">Continue ▶</button></div>`;
+                overlay.querySelector('#tq-continue').addEventListener('click', done);
+            }, { once: true });
+        }
+
+        function showResults() {
             const forge = [...new Set(level.items.filter(i => inForge(state, i.id, now())).map(i => i.word))];
             const nextOpen = levelIndex + 1 < LEVELS.length && isLevelUnlocked(levelIndex + 1, state);
             overlay.hidden = false;
@@ -501,7 +622,6 @@ export function initTorchQuest(container, words, onBack, opts = {}) {
                 ${door ? `<p>Boss door: ${door.levelsDone}/5 levels · ${door.stars}/${door.needStars} ⭐ · ${Math.min(door.blocks, door.needBlocks)}/${door.needBlocks} ${TIERS[door.tier]} blocks</p>` : ''}
                 <div class="tq-stars" aria-label="${run.stars} stars">${starText(run.stars)}</div>
                 <p>🔩 ${game.bolts} bolts${run.usedCheckpoint ? ' · No flag restart next time for more stars!' : run.stars < 3 ? ' · Keep all 3 hearts for 3 stars!' : ''}</p>
-                ${run.promoted.length ? `<p>New blocks: ${run.promoted.map(p => `<b>${p.word}</b> → ${TIERS[p.tier]}`).join(', ')}</p>` : ''}
                 ${forge.length ? `<p>In the forge until tomorrow: ${forge.join(', ')}</p>` : ''}
                 <div class="tq-row">
                     <button class="tq-btn alt" id="tq-map">Map</button>

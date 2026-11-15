@@ -433,3 +433,142 @@ phone. Syncing across devices would need accounts and a server, which the app do
 Still open: jumping gets a little harder in later worlds (wider gaps, stacked crates) but
 never costs a heart. If he finds the jumping frustrating or too easy, say so: it is one
 setting per world (`obstacles` in `quest/content.js`).
+
+---
+
+## 13. Keeping him keen (partly built)
+
+The fair-plate rules (§5a) made the gates honest, which also made them harder. He needs more
+reason to push through the harder reading, and more fun around it. Three asks from the parent:
+a hint tool, more exciting Copper / Silver / Gold, and richer gameplay.
+
+**The golden rule for everything below:** fun is *earned by reading* or *neutral to it*. Nothing
+may make a gate easier to guess, and the shortcut-player tests (§5a) must stay green with every
+new feature switched on. Today bolts are collected but cannot be spent, and word tiers are only
+a label on the map; most ideas below give those two things a purpose.
+
+### 13a. Hint tool: Clunk's Scanner
+
+A scanner button beside the 🔊, run by Clunk. It helps him *decode*, never tells him the answer.
+Hints cost bolts, which gives the running and jumping a point. Three steps, each a separate tap:
+
+| Step | What it does | Cost | Why it is not a shortcut |
+| --- | --- | --- | --- |
+| 1. Slow-mo | Says the word again, slowly. | Free | Same information as 🔊. |
+| 2. Chunk | Splits every plate into its sound chunks with gaps and colours: *b·u·s·e·s*, *ch·o·p*, *n·igh·t*. Digraphs stay together and glow. | 5 bolts | It helps him sound out every plate equally; he still has to match one to the word he heard. |
+| 3. Zap one | Clunk zaps one wrong plate off the board. | 15 bolts, once per level | Leaves two or three plates, which all still follow the fair-plate rules. |
+
+- **A hinted answer keeps his heart but does not tick the word's block** (no progress towards
+  Copper, Silver or Gold). Hints are a rescue, not a route to mastery.
+- No hints in Gold sentence gates, or on boss stages after the fuse starts (bosses test
+  speed).
+- The Training Bay (§7) stays the free, no-cost way to learn a word he keeps missing.
+
+### 13b. Copper, Silver and Gold that feel like treasure
+
+**The Forge.** At the flag, any word that went up a tier goes into the forge instead of a line
+of text. He taps to hammer it (3 taps, sparks, clang), the block glows and is said aloud, and it
+pops out in its new metal. It is short, physical and celebratory, and it repeats the word once
+more. Silver and Gold get bigger effects (Gold: fireworks and a fanfare).
+
+**Each tier unlocks something real**, so a block is worth chasing:
+
+| Tier | What he gets |
+| --- | --- |
+| Copper | The block can be used in Torch's Workshop (§13d). |
+| Silver | A **Torch part**: each 5 Silver blocks unlocks a new look (silver visor, chrome arms, jet boots, tail lights…). |
+| Gold | Gold blocks shine in the Workshop, and a world with all its words at Gold earns that world's **trophy** and a sticker. |
+
+**Morning delivery.** The one-step-a-day rule (§6) is currently invisible. Make it a moment: a
+word that hit its 3 ticks waits in the forge overnight, and the next day Torch Quest opens on a
+**delivery screen** where the new Silver and Gold blocks roll off a conveyor. It turns waiting
+into something to look forward to and brings him back the next day. There is no streak to lose.
+
+**Mystery crate at every flag** (already in §9, not built): bolts, a sticker or a Workshop part,
+at random. Variable rewards are what keep ADHD attention (design guidelines).
+
+### 13c. Gameplay that is more fun
+
+Keep the core rule (bumps never cost hearts; reading decides the level), and make the running
+part worth playing:
+
+1. **Reading powers Torch up (Turbo).** Three first-try right answers in a row fill a power bar,
+   and Torch **transforms into his car** for the next stretch: faster, smashes crates, pulls
+   bolts in like a magnet, and leaves flames. A wrong answer ends it. This links good reading to
+   the most fun moment of the game, and uses the robot-to-car transform from the stories.
+2. **Hold to jump higher.** A quick tap is a hop and a held tap a big jump. It is a small
+   timing skill that makes the platforming feel like a real game, and still uses one thumb.
+3. **New things on the course**, one or two per world so each world feels new:
+   - Springs that launch him to a high route with extra bolts.
+   - Drones he can bounce on (stomp, boing, bolts).
+   - Moving platforms, rails to slide along (Rain Rail) and oil slicks (Oil Port).
+   - A secret bonus door per level, only reachable in Turbo.
+
+   None of these can cost a heart. A miss costs bolts or time.
+4. **Rescue a friend.** Each level has a trapped robot friend at the flag. Every right answer
+   powers the rescue beam, and with all gates done the friend is freed and joins the crew
+   picture on the map.
+5. **Bolt rain bonus.** After a 3-star level, 10 seconds of bolts falling from the sky to catch:
+   pure fun and a cheap, exciting reward.
+6. **Better bosses.** Bosses get 3 phases (the drone changes colour and moves faster) and a
+   proper defeat animation.
+
+### 13d. Torch's Workshop (the long goal)
+
+A small grid where he builds a base out of his word blocks (Minecraft-style) plus parts from
+crates and the shop. Placing a block says its word. No reading test and no failure: it is his
+space, and it is why he wants more blocks and better metals. Gold blocks shine and some parts
+need Gold (a rocket pad needs 3 Gold blocks).
+
+### 13e. A shop for bolts
+
+Bolts finally buy things:
+- Hints (13a).
+- Torch paint jobs and decorations.
+- **Helpers that make running easier but never reading:** a bolt magnet, a one-bump shield and
+  a longer Turbo.
+
+Prices are tuned so a good level buys one small thing.
+
+### 13f. What is built (parent's choice: Turbo, and Forge + mystery crates)
+
+- **Turbo (13c.1), built.**
+  - Three right answers in a row fill the ⚡ meter in the HUD, and Torch transforms into his car (pixel car with a flame trail, an engine roar and “⚡ TURBO!”).
+  - In car mode he runs about 60% faster, smashes crates for a bolt instead of bouncing off, and pulls in bolts from about three times as far.
+  - The next wrong answer, or going back to the flag, ends it.
+  - It never touches the gates: the same seed gives the same plates with or without Turbo (tested), and every course can be cleared at car speed (tested).
+  - Code: `TURBO_STREAK` and `run.turbo` in `quest/run.js`; `setTurbo` in `quest/runner.js`.
+- **The Forge (13b), built.**
+  - At the flag, each word that went up a tier this run gets a forge screen: the block sits on an anvil in its old metal, and he taps 🔨 three times (sparks, clangs).
+  - It comes out in its new metal with a glow, and the word is said aloud.
+  - Gold gets bigger sparks, the slam sound and a fanfare.
+- **Mystery crate (13b), built.**
+  - After the forge, a wobbling crate: tap to open. Usually 5 or 10 bolts, sometimes a 25-bolt pile, sometimes a sticker from the hub's sticker collection.
+  - A 3-star level doubles the sticker chance (30% instead of 15%); a boss always gives a sticker, or 30 bolts if he owns them all.
+  - Code: `quest/rewards.js`.
+- **Not built yet:** hints (13a), Silver Torch parts and the morning delivery (13b), course elements and bolt rain (13c.2–6), the Workshop and shop (13d, 13e).
+
+### 13g. Suggested build order
+
+1. **First (biggest effect for the effort):**
+   - Turbo transform for a 3-in-a-row reading streak (13c.1).
+   - Clunk's Scanner hints paid in bolts (13a).
+   - The Forge ceremony at the flag (13b).
+   - Mystery crates (13b).
+
+   Together these give bolts a use, reward reading streaks with the most fun moment, and make
+   tier-ups feel big. Then watch him play.
+2. **Next:**
+   - Hold to jump, springs and stompable drones (13c.2–3).
+   - Torch parts for Silver and the morning delivery (13b).
+   - Bolt rain (13c.5).
+3. **Later:**
+   - The Workshop and shop (13d, 13e).
+   - Rescue a friend (13c.4).
+   - Boss phases (13c.6).
+
+Tests to add with each step:
+- The shortcut players still do no better than random with hints and Turbo switched on.
+- A hinted answer never ticks a block.
+- No new course element can cost a heart.
+- Every course is still finishable without jumping well.

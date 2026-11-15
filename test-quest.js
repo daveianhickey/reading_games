@@ -17,7 +17,8 @@ const m = await import('./quest/mastery.js');
 const g = await import('./quest/gates.js');
 const { WORD_BANK } = await import('./quest/wordbank.js');
 const { letterDiff } = await import('./quest/index.js');
-const { createRun, createTapGuard, CHECKPOINT_AFTER } = await import('./quest/run.js');
+const { createRun, createTapGuard, CHECKPOINT_AFTER, TURBO_STREAK } = await import('./quest/run.js');
+const { rollCrate } = await import('./quest/rewards.js');
 const { buildCourse, mulberry32, GROUND_Y } = await import('./quest/level.js');
 const { createGame, RESPAWN_BACK } = await import('./quest/runner.js');
 const { initTorchQuest } = await import('./quest/index.js');
@@ -37,6 +38,14 @@ async function test(name, fn) {
     }
 }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+// After the flag: hammer any forge blocks, open the mystery crate, then the results screen.
+async function throughRewards(el) {
+    for (let guard = 0; guard < 20 && el.querySelector('#tq-hammer, #tq-forged, #tq-crate, #tq-continue'); guard++) {
+        const btn = el.querySelector('#tq-hammer, #tq-forged, #tq-crate, #tq-continue');
+        btn.click();
+        await sleep(2);
+    }
+}
 const fresh = () => ({ items: {}, levels: {}, bolts: 0 });
 const DAY = 24 * 60 * 60 * 1000;
 const T0 = new Date(2026, 0, 5, 10).getTime();
@@ -595,6 +604,8 @@ await test('screens: power down shows the missed words; the flag saves stars and
     for (let i = 0; i < 8; i++) await answer(true);
     toGate();
     assert.strictEqual(game.mode, 'finish');
+    assert.ok(el.querySelector('#tq-crate'), 'a mystery crate at the flag');
+    await throughRewards(el);
     assert.ok(el.querySelector('.tq-stars').textContent.includes('★★★'));
     const saved = JSON.parse(localStorage.getItem('y1Quest'));
     assert.strictEqual(saved.levels['1-1'].stars, 3);
@@ -758,6 +769,155 @@ await test('shortcuts: first letter, length, both, and odd-one-in do no better t
         assert.ok(r.hit <= random.hit + slack, `${r.name} beats random: ${(100 * r.hit).toFixed(0)}% vs ${(100 * random.hit).toFixed(0)}%`);
         assert.ok(r.finish < (r.name === 'firstLengthLast' ? 0.2 : 0.05), `${r.name} finishes ${(100 * r.finish).toFixed(1)}% of stages`);
     }
+});
+
+// ---------- Keeping him keen (design §13): Turbo, the Forge, mystery crates ----------
+
+await test('turbo: 3 right in a row turns it on, a miss turns it off, and it never changes the plates', () => {
+    const rng = mulberry32(41);
+    const run = createRun({ levelIndex: 0, state: fresh(), rng, now: () => T0 });
+    const right = () => run.answer(run.currentGate().correctIndex);
+    const wrong = () => { const gate = run.currentGate(); return run.answer((gate.correctIndex + 1) % gate.plates.length); };
+    assert.strictEqual(TURBO_STREAK, 3);
+    assert.ok(!right().turboOn && !run.turbo);
+    assert.ok(!right().turboOn);
+    assert.strictEqual(right().turboOn, true);
+    assert.ok(run.turbo);
+    assert.ok(!right().turboOn, 'only announced once');
+    assert.ok(run.turbo, 'stays on while he keeps reading right');
+    assert.strictEqual(wrong().turboOff, true);
+    assert.ok(!run.turbo);
+    // Same seed, same plates whether or not Turbo is on: it is a running reward only.
+    const a = createRun({ levelIndex: 2, state: fresh(), rng: mulberry32(9), now: () => T0 });
+    const b = createRun({ levelIndex: 2, state: fresh(), rng: mulberry32(9), now: () => T0 });
+    for (let i = 0; i < 8; i++) {
+        assert.deepStrictEqual(a.currentGate().plates, b.currentGate().plates);
+        a.answer(a.currentGate().correctIndex);
+        b.answer(b.currentGate().correctIndex);
+    }
+});
+
+await test('turbo: the car is faster, smashes crates for a bolt, and pulls bolts in', () => {
+    const course = buildCourse(3, 8, 4, WORLDS[2].obstacles);
+    const walk = turbo => {
+        const game = createGame({ course: structuredClone(course), canvas: null });
+        game.setTurbo(turbo);
+        const x = game.torch.x;
+        for (let i = 0; i < 60; i++) game.step(1 / 120);
+        return game.torch.x - x;
+    };
+    assert.ok(walk(true) > walk(false) * 1.4, 'faster in car mode');
+    const c = structuredClone(course);
+    const crate = c.crates.find(k => k.x > 200);
+    let smashed = 0, bumps = 0;
+    const game = createGame({ course: c, canvas: null, hooks: { onSmash: () => smashed++, onBump: () => bumps++ } });
+    game.setTurbo(true);
+    c.gates.forEach(g => { g.open = true; });
+    Object.assign(game.torch, { x: crate.x - 30 });
+    for (let i = 0; i < 120; i++) game.step(1 / 120);
+    assert.ok(crate.broken && smashed >= 1, 'crate smashed');
+    assert.strictEqual(bumps, 0, 'no bump, no lost bolts');
+    // Magnet: a bolt 30px away is collected in car mode.
+    const m = structuredClone(course);
+    m.gates.forEach(g => { g.open = true; });
+    m.crates.length = 0; m.gaps.length = 0;
+    m.bolts = [{ x: 200, y: GROUND_Y - 45, taken: false }];
+    const g2 = createGame({ course: m, canvas: null });
+    g2.setTurbo(true);
+    Object.assign(g2.torch, { x: 150 });
+    for (let i = 0; i < 60; i++) g2.step(1 / 120);
+    assert.strictEqual(g2.bolts, 1, 'car pulls in a bolt it would have run under');
+});
+
+await test('turbo: every course can still be run in car mode without falling', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+        const world = WORLDS[seed % WORLDS.length];
+        const course = buildCourse(seed, 8, 4, world.obstacles);
+        let falls = 0, finished = false;
+        const game = createGame({ course, canvas: null, autoJump: true, hooks: { onBump: () => falls++, onFinish: () => { finished = true; } } });
+        game.setTurbo(true);
+        for (let i = 0; i < 120 * 300 && !finished; i++) { game.step(1 / 120); if (game.mode === 'gate') game.openGate(); }
+        assert.ok(finished, `seed ${seed}`);
+        assert.strictEqual(falls, 0, `seed ${seed}: a well-timed jump clears every gap at car speed`);
+    }
+});
+
+await test('screens: Turbo shows on the meter after 3 right answers and switches off on a miss', async () => {
+    const el = document.body.appendChild(document.createElement('div'));
+    let clock = T0;
+    const quest = initTorchQuest(el, [], () => {}, { lockMs: 0, feedbackMs: 0, autoStart: false, autoJump: true, rng: mulberry32(42), seed: 5, now: () => (clock += 1000) });
+    const { game, run } = quest.startLevel(0);
+    const answer = async right => {
+        while (game.mode === 'run') game.step(1 / 120);
+        await sleep(3);
+        const gate = run.currentGate();
+        el.querySelectorAll('.tq-plate')[right ? gate.correctIndex : (gate.correctIndex + 1) % gate.plates.length].click();
+        await sleep(3);
+    };
+    await answer(true); await answer(true);
+    assert.strictEqual(el.querySelectorAll('.tq-turbo i.on').length, 2);
+    assert.ok(!game.turbo);
+    await answer(true);
+    assert.ok(game.turbo, 'car mode');
+    assert.ok(el.querySelector('.tq-turbo').classList.contains('go'));
+    await answer(false);
+    assert.ok(!game.turbo, 'a miss ends Turbo');
+    assert.strictEqual(el.querySelectorAll('.tq-turbo i.on').length, 0);
+});
+
+await test('screens: a block that goes up is hammered in the Forge, then the crate, then results', async () => {
+    const st = fresh();
+    // Every word on 2 ticks: the first right answer for each goes up to Copper.
+    for (const item of LEVELS[0].items) st.items[item.id] = { tier: 0, ticks: 2, promoDay: null, missDay: null, misses: 0, last: T0 - DAY };
+    m.saveState(st);
+    const el = document.body.appendChild(document.createElement('div'));
+    let clock = T0;
+    const quest = initTorchQuest(el, [], () => {}, { lockMs: 0, feedbackMs: 0, autoStart: false, autoJump: true, rng: mulberry32(43), seed: 5, now: () => (clock += 1000) });
+    const { game, run } = quest.startLevel(0);
+    for (let i = 0; i < 8; i++) {
+        while (game.mode === 'run') game.step(1 / 120);
+        await sleep(3);
+        el.querySelectorAll('.tq-plate')[run.currentGate().correctIndex].click();
+        await sleep(3);
+    }
+    while (game.mode === 'run') game.step(1 / 120);
+    assert.strictEqual(game.mode, 'finish');
+    const promoted = new Set(run.promoted.map(p => p.word));
+    assert.ok(promoted.size >= 5);
+    for (let k = 0; k < promoted.size; k++) {
+        assert.ok(el.querySelector('#tq-hammer'), `forge screen ${k + 1}`);
+        const block = el.querySelector('.tq-anvil .tq-block');
+        assert.ok(block.classList.contains('t0'), 'starts as Scrap');
+        assert.ok(promoted.has(block.textContent));
+        el.querySelector('#tq-hammer').click();
+        el.querySelector('#tq-hammer').click();
+        assert.ok(!el.querySelector('#tq-forged'), 'needs three hits');
+        el.querySelector('#tq-hammer').click();
+        assert.ok(block.classList.contains('t1'), 'comes out Copper');
+        assert.ok(/is Copper/.test(el.querySelector('h2').textContent));
+        el.querySelector('#tq-forged').click();
+    }
+    assert.ok(el.querySelector('#tq-crate'), 'then the mystery crate');
+    const before = JSON.parse(localStorage.getItem('y1Quest')).bolts;
+    el.querySelector('#tq-crate').click();
+    const after = JSON.parse(localStorage.getItem('y1Quest')).bolts;
+    const stickers = JSON.parse(localStorage.getItem('y1Stickers') || '[]');
+    assert.ok(after > before || stickers.length === 1, 'the crate gave bolts or a sticker');
+    el.querySelector('#tq-continue').click();
+    assert.ok(el.querySelector('.tq-stars'), 'then the results');
+});
+
+await test('rewards: crates are varied, careful play pays better, and bosses always give a sticker', () => {
+    const tally = (stars, n = 4000) => {
+        const rng = mulberry32(stars);
+        const t = { sticker: 0, big: 0, small: 0 };
+        for (let i = 0; i < n; i++) { const p = rollCrate({ stars, rng }); p.kind === 'sticker' ? t.sticker++ : p.big ? t.big++ : t.small++; }
+        return t;
+    };
+    const one = tally(1), three = tally(3);
+    assert.ok(three.sticker > one.sticker * 1.5, '3 stars: better odds of a sticker');
+    for (const t of [one, three]) assert.ok(t.sticker > 0 && t.big > 0 && t.small > 0, 'every kind of prize happens');
+    assert.strictEqual(rollCrate({ boss: true }).kind, 'sticker');
 });
 
 console.log(failures ? `\n${failures} Torch Quest test(s) failed` : '\nAll Torch Quest tests passed');

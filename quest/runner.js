@@ -4,6 +4,8 @@ import { GROUND_Y } from './level.js';
 
 export const VIEW = { w: 400, h: 225 };
 const SPEED = 110;
+const TURBO_SPEED = 175;   // car mode
+const MAGNET = 42;         // car mode pulls in bolts from this far away
 const GRAVITY = 720;
 const JUMP_V = -265;
 const GATE_STOP = 52;   // Torch stops this far in front of a gate
@@ -32,6 +34,18 @@ const LEGS = {
     runB: ['...GG..GG...', '...GG..GG...', '..KKK..KKK..', '..KKK..KKK..'],
     jump: ['..GG....GG..', '.KKK....KKK.', '............', '............']
 };
+// Car mode, 16×9: Torch transformed (the robot-to-car change from the stories).
+const CAR = [
+    '....RRRRRR......',
+    '...RBBBBBBR.....',
+    '..RBBKBBBBBRR...',
+    'RRRRRRRRRRRRRRRY',
+    'RYYYYRRRRRYYYYRY',
+    'RRRRRRRRRRRRRRRR',
+    'DDKKKDDDDDDKKKDD',
+    '..KGK......KGK..',
+    '...K........K...'
+];
 const COLORS = { R: '#e8402f', D: '#9c1f1a', Y: '#ffd23f', B: '#7fe3ff', K: '#1d2433', G: '#9aa5b1' };
 
 function drawSprite(ctx, rows, x, y, scale = 2) {
@@ -93,6 +107,9 @@ export function createGame({ course, canvas, hooks = {}, autoJump = false, theme
         get gateIndex() { return gateI; },
         // Boss stages: how many hits Darkstorm's drone can still take (shown as a bar).
         bossHp: boss ? boss.hp : 0,
+        turbo: false,
+        // Reading streak reward: faster, smashes crates, pulls in bolts. Jumping still works.
+        setTurbo(on) { game.turbo = !!on; },
         hitBoss() { if (boss && game.bossHp > 0) { game.bossHp--; bossHit.t = 0.5; } },
 
         jump() { if (mode === 'run') jumpBuffer = BUFFER; },
@@ -118,11 +135,12 @@ export function createGame({ course, canvas, hooks = {}, autoJump = false, theme
             jumpBuffer = Math.max(0, jumpBuffer - dt);
             // After a fall he stands still for a moment, so he can see the hole coming.
             if (ready > 0) { ready -= dt; return; }
-            if (knock > 0) { knock -= dt; torch.x -= 90 * dt; } else torch.x += SPEED * dt;
+            if (knock > 0) { knock -= dt; torch.x -= 90 * dt; } else torch.x += (game.turbo ? TURBO_SPEED : SPEED) * dt;
 
             if (autoJump && torch.grounded) {
                 const ahead = torch.x + 14;
-                if (course.gaps.some(g => !g.bridged && ahead > g.x && torch.x < g.x) || course.crates.some(c => !c.broken && torch.x + (c.h > 16 ? 30 : 22) > c.x && torch.x < c.x)) jumpBuffer = BUFFER;
+                const lead = game.turbo ? 1.6 : 1;
+                if (course.gaps.some(g => !g.bridged && torch.x + 14 * lead > g.x && torch.x < g.x) || (!game.turbo && course.crates.some(c => !c.broken && torch.x + (c.h > 16 ? 30 : 22) > c.x && torch.x < c.x))) jumpBuffer = BUFFER;
             }
             if (jumpBuffer > 0 && (torch.grounded || sinceGround < COYOTE) && torch.vy >= 0) {
                 torch.vy = JUMP_V; torch.grounded = false; sinceGround = COYOTE; jumpBuffer = 0;
@@ -158,6 +176,13 @@ export function createGame({ course, canvas, hooks = {}, autoJump = false, theme
             for (const c of course.crates) {
                 const h = c.h || 16;
                 if (c.broken || torch.x + 7 <= c.x || torch.x - 7 >= c.x + 16 || torch.y <= GROUND_Y - h) continue;
+                if (game.turbo) {
+                    // Car mode smashes straight through, and the crate drops a bolt.
+                    c.broken = true;
+                    game.bolts++;
+                    hooks.onSmash?.(game.bolts);
+                    continue;
+                }
                 if (torch.vy > 0 && prevY <= GROUND_Y - h + 3) {
                     torch.y = GROUND_Y - h; torch.vy = -170; // hop off the top
                 } else if (knock <= 0) {
@@ -169,7 +194,8 @@ export function createGame({ course, canvas, hooks = {}, autoJump = false, theme
             }
 
             for (const b of course.bolts) {
-                if (b.taken || Math.abs(b.x - torch.x) > 13 || Math.abs(b.y - (torch.y - 14)) > 17) continue;
+                const reach = game.turbo ? MAGNET : 13;
+                if (b.taken || Math.abs(b.x - torch.x) > reach || Math.abs(b.y - (torch.y - 14)) > Math.max(17, reach)) continue;
                 b.taken = true;
                 game.bolts++;
                 hooks.onBolt?.(game.bolts);
@@ -270,7 +296,16 @@ export function createGame({ course, canvas, hooks = {}, autoJump = false, theme
                 }
             }
             // Torch
-            if (blink <= 0 || Math.floor(time * 12) % 2) {
+            if (game.turbo && (blink <= 0 || Math.floor(time * 12) % 2)) {
+                const x = Math.floor(torch.x - cam - 16), y = Math.floor(torch.y - 18);
+                // Flame trail.
+                for (let k = 0; k < 3; k++) {
+                    const len = 6 + Math.floor(hash(Math.floor(time * 30) + k) * 10);
+                    ctx.fillStyle = k === 1 ? '#ffd23f' : '#ff7a1a';
+                    ctx.fillRect(x - len, y + 6 + k * 3, len, 2);
+                }
+                drawSprite(ctx, CAR, x, y);
+            } else if (blink <= 0 || Math.floor(time * 12) % 2) {
                 const legs = !torch.grounded ? LEGS.jump : mode !== 'run' ? LEGS.stand : Math.floor(time * 10) % 2 ? LEGS.runA : LEGS.runB;
                 drawSprite(ctx, [...BODY, ...legs], Math.floor(torch.x - cam - 12), Math.floor(torch.y - 32));
             }

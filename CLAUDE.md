@@ -92,9 +92,10 @@ Reading games for young children, built with vanilla JS + Vite (no framework).
 | `quest/mastery.js` | Pure logic: tiers (Scrap → Gold), 3 ticks to go up, one tier per day, rust, `pickGateItems`, level / world / boss-door unlocks. Storage `y1Quest`. |
 | `quest/gates.js` | Pure logic: builds a gate's plates for a word at a tier (hear it, look-alikes, flash-and-find, Gold sentence) with the fair-plate rules (design §5a): same first letter, same length, same ending where possible, no odd-one-in, no sound-alikes; alien words only for two-letter words. |
 | `quest/wordbank.js` | `WORD_BANK`: ~600 wrong-plate words (not targets, not from school, never scored; see below). Add words here if the alien-word test names a 3+ letter target. |
-| `quest/run.js` | Pure logic: one attempt at a level: hearts, one answer per gate, mid-level flag, stars, overheat guard. |
-| `quest/level.js`, `quest/runner.js` | Seeded course generator and the canvas runner (auto-run, tap to jump, a `THEMES` look per world, boss drone). Bumps cost bolts, never hearts. |
-| `quest/index.js` | `initTorchQuest(container, words, onBack)`: world map, level, plates, boss fuse, power-down, flag and Training Bay screens. |
+| `quest/run.js` | Pure logic: one attempt at a level: hearts, one answer per gate, mid-level flag, stars, overheat guard, Turbo (3 right in a row). |
+| `quest/rewards.js` | Mystery crate roll at the flag (bolts, big bolts, sticker; bosses always a sticker). |
+| `quest/level.js`, `quest/runner.js` | Seeded course generator and the canvas runner (auto-run, tap to jump, a `THEMES` look per world, boss drone, Turbo car mode). Bumps cost bolts, never hearts. |
+| `quest/index.js` | `initTorchQuest(container, words, onBack)`: world map, level, plates, Turbo meter, boss fuse, power-down, flag, Forge, mystery crate and Training Bay screens. |
 | `test-quest.js` | Rules, a guessing bot (must almost never finish a level) and screen tests (part of `npm test`). |
 
 **Two kinds of words in Torch Quest (keep them apart):**
@@ -114,6 +115,8 @@ Reading games for young children, built with vanilla JS + Vite (no framework).
   rude, scary or adult; not a sound-alike of a target (add pairs to `HOMOPHONES`); lower case
   (titles like *Mr* stand out). The parent may prune the bank; the tests say if a target is
   left short.
+- Rewards and fun (Turbo, Forge, crates; design doc §13) must be earned by reading or be neutral to
+  it: they may never change which plates a gate shows or make a gate easier to guess.
 - Don't loosen the fair-plate rules in `quest/gates.js` to make a gate easier: they stop the
   first-letter and length shortcuts he really used. The shortcut-player test in
   `test-quest.js` must stay green.
