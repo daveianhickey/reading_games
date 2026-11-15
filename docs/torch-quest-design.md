@@ -100,15 +100,15 @@ of gate he gets depends on that word's mastery tier (§6), so the game gets hard
 
 | Tier | Gate | What he does | What it trains |
 | --- | --- | --- | --- |
-| 1 Scrap | **Hear it, find it** | Radio says the word. 3 plates with clearly different words (*was / the / go*). | Linking the spoken word to its print. |
-| 2 Copper | **Look-alikes** | Same, but the other plates are near-misses (*was / saw / wag*, *there / three / then*). | Reading the whole word, not the first letter. |
+| 1 Scrap | **Hear it, find it** | Radio says the word. The other plates start the same and are as long, but differ a lot after the first letter (*buses / bells / barks*). | Linking the spoken word to its print. |
+| 2 Copper | **Look-alikes** | Same, but the other plates are near-misses (*buses / boxes / bikes*, *rail / real / reel*). | Reading the whole word, not the first letter. |
 | 3 Silver | **Flash and find** | No voice. The word shows on a screen for 1.5 s, then hides. Then 3 look-alike plates. | Holding the spelling in memory. This is the memorising step. |
 | 4 Gold | **Read it cold** | No voice. A sentence with a gap and a picture (“a ___ with a red door” 🏠). (*Build it* from letter blocks: not built yet.) | Reading for meaning. |
 
 The number of plates comes from the world (3 in Worlds 1–2, 4 from World 3, §8a).
 
 GPC gates work the same way with decodable words: the radio says “chomp”, the plates are
-*chomp / shop / thump*. At tier 4 the gap sentence comes from the item's clue in the curriculum;
+*chomp / chimp / champ*. At tier 4 the gap sentence comes from the item's clue in the curriculum;
 decodable words have no clue sentence, so at Gold they stay flash-and-find.
 
 **Fair plates.** A hear-it gate never shows a word that sounds the same as the target
@@ -118,9 +118,21 @@ a coin toss. A sentence gate is the opposite: there the sound-alike is the best 
 Sentence gates never use another tricky word as a wrong plate, because many would also fit the
 gap (*his / her / my* in “___ dog is big”).
 
-Look-alike distractors are generated, not hand-written: same first letter, same length ± 1,
-letters swapped or reversed (*was/saw*, *of/off*, *her/here*), drawn from curriculum words so
-every plate is a real word.
+**Two kinds of words.** Keep them apart in every future change:
+
+| | Target words | Wrong-plate words |
+| --- | --- | --- |
+| What they are | What he is learning | Words that are never the answer |
+| Where they come from | **Only** the school lists: focus words and focus sounds (`docs/curriculum/year1-focus-weak-spots.md`), each sound practised through decodable example words | Chosen by hand for this game, **not** from school, each checked as decodable |
+| Where they live | `WORLDS` in `quest/content.js` (157 different words across 5 worlds) | `WORD_BANK` in `quest/wordbank.js` (~600) and the older `DISTRACTOR_WORDS` in `quest/content.js`; target words also serve as wrong plates for each other |
+| Spoken, tested, scored, made into blocks | Yes | Never |
+| Change them when | The school's list changes | A gate lacks fair wrong plates (§5a) |
+
+Wrong plates are picked by code, not written per gate, following the rules in §5a. Bank words
+must be real, everyday words a 5-year-old might meet, decodable, nothing rude, scary or adult,
+not a sound-alike of a target (add the pair to `HOMOPHONES` in `quest/content.js`), and in lower
+case. Adding a word to the bank never changes what he learns. Pruning it is safe: the tests
+report any target left without enough partners.
 
 ---
 
@@ -154,6 +166,64 @@ The flag makes scraping through easier, which is why a run that used it earns on
 why stars, not finished levels, open the map: two 1-star levels do not open level 3.
 The test fails if guessing ever finishes more than 10% (4% without the flag), so the property
 cannot quietly regress.
+
+### 5a. No shortcuts: first letter and length
+
+**What he found.** Guessing was solved, so he found two smarter shortcuts. Hearing “buses”, he
+tapped the only plate starting with *b*. Or he tapped the plate whose length matched how long
+the word sounded (*buses* among *be / we*). Both show he is reading a little, which is good, but
+neither needs the whole word, so the word was not being learned. His screenshot showed both at
+once: *be / thump / we*, where first letter or length alone gives the answer.
+
+**The rules.** Every gate, in every world and tier, now follows four rules (`quest/gates.js`):
+
+1. **Same start.** Every wrong plate starts with the target's first letter: *buses / bells /
+   barks*, *thump / thank / think*, *children / chickens / cheering*. Two-letter words are the
+   exception: there every plate has two letters and at least one starts the same (*to / ta /
+   so*), because the two letters together *are* the reading.
+2. **Same length.** Plates are exactly as long as the target whenever real words allow, never
+   more than one letter off, and at least one wrong plate is always exactly as long.
+3. **Same ending where possible.** As many wrong plates as possible also end like the target
+   (*buses / boxes / bikes*), so first letter + last letter + length still leaves him needing
+   the middle of the word.
+4. **No odd-one-in.** When every wrong plate is built to look like the target, the target can
+   end up the plate that looks most like all the others, which is a shortcut of its own. The
+   picker avoids that; a test bot that always picks the most typical plate scores below random.
+
+Plates also give nothing away on screen: every plate in a gate is the same size and uses the
+same font size (set by the longest word), so a long word does not get a bigger or smaller box.
+
+**Alien words.** Where there are not enough real words (only two-letter words such as *to*, *go*,
+*we*), one made-up word fills in, like the “alien words” in the Year 1 phonics screening check:
+*ta*, *ti* for *to*. At most one per gate. They are built so they can never sound like the
+target (a consonant is swapped, never a vowel or a digraph; two-letter words avoid vowels that
+could say the same sound), they use only letter patterns found in real words, and a rude-word
+filter checks them.
+
+**Learning from a miss.** After a wrong answer, the two words are shown side by side with the
+letters that differ underlined (✗ *bells* / ✓ *buses*), and the right word is said. The lesson
+is “look past the first letter”, shown rather than told.
+
+**Proof.** `test-quest.js` plays every stage with shortcut players that only know how the word
+starts, how long it sounds and how it ends. Per gate, on words of 3+ letters:
+
+| Shortcut player | Right first time | Finishes a stage |
+| --- | --- | --- |
+| Random tapping | 30% | 2.5% |
+| First letter | 31% | 2.8% |
+| Length | 30% | 2.5% |
+| First letter + length | 31% | 2.8% |
+| Most typical plate (odd-one-in) | 25% | 1.1% |
+| First + last letter + length | 41% | 10.5% |
+
+The first four are no better than random, which is the goal. The last player is already doing
+most of the reading (first letter, last letter and length), and a few targets (*you*, *was*,
+*her*) have no real word that starts, ends and measures the same; it still has to read the
+middle of most words. The tests fail if any shortcut drifts above these limits.
+
+**Layout.** On an upright phone the word gate now sits in the empty space below the game
+instead of on top of it, with big full-width plates, so it no longer covers Torch or the
+progress bar. Long words never spill out of their plate.
 
 ---
 
@@ -313,7 +383,8 @@ Vanilla JS and Vite like the rest of the app, no new dependencies.
 | --- | --- |
 | `quest/content.js` | Worlds → levels → item ids (from `phonics/curriculum.js`), decodable words per GPC. |
 | `quest/mastery.js` | Pure logic: tiers, ticks, one-tier-per-day, rust, picking a level's 8 gate items. Storage key `y1Quest`. |
-| `quest/gates.js` | Pure logic: build a gate for an item at a tier, look-alike distractors, plate positions. |
+| `quest/gates.js` | Pure logic: build a gate for an item at a tier with the fair-plate rules (§5a), plate positions, alien words. |
+| `quest/wordbank.js` | Wrong-plate words only (§4, “Two kinds of words”). |
 | `quest/level.js` | Level generator: strings terrain segments and gates together from a seed. |
 | `quest/runner.js` | Canvas 2D game loop (fixed timestep), Torch physics, collisions, camera, sprites. |
 | `quest/index.js` | DOM layer over the canvas: plates (real buttons, so they are crisp and accessible), hearts, map, boss fuse, Training Bay. |

@@ -15,6 +15,8 @@ dom.window.HTMLCanvasElement.prototype.getContext = () => null; // no canvas in 
 const { LEVELS, WORLDS, ALL_ITEMS, DISTRACTOR_WORDS, soundsSame, worldItems } = await import('./quest/content.js');
 const m = await import('./quest/mastery.js');
 const g = await import('./quest/gates.js');
+const { WORD_BANK } = await import('./quest/wordbank.js');
+const { letterDiff } = await import('./quest/index.js');
 const { createRun, createTapGuard, CHECKPOINT_AFTER } = await import('./quest/run.js');
 const { buildCourse, mulberry32, GROUND_Y } = await import('./quest/level.js');
 const { createGame, RESPAWN_BACK } = await import('./quest/runner.js');
@@ -89,7 +91,7 @@ await test('content: the skill ladder never gets easier from one world to the ne
 });
 
 await test('content: every wrong plate is a real word he can read', () => {
-    const bad = DISTRACTOR_WORDS.filter(w => !d.whyReadable(w));
+    const bad = [...DISTRACTOR_WORDS, ...WORD_BANK].filter(w => !d.whyReadable(w));
     assert.deepStrictEqual(bad, []);
 });
 
@@ -111,16 +113,73 @@ await test('gates: exactly one right plate, no duplicates, right word in the sta
     }
 });
 
-await test('gates: Scrap plates look different, Copper plates are look-alikes', () => {
+// ---------- Fair plates (design §5a): no first-letter or length shortcut ----------
+
+await test('fair plates: every gate, every tier: same start, same length, target not the odd one in', () => {
     const rng = mulberry32(2);
+    let gates = 0;
+    const problems = [];
     for (const item of ALL_ITEMS) {
-        for (const w of g.unlikeWords(item.word, 2, rng)) assert.notStrictEqual(w[0], item.word[0], `${w} starts like ${item.word}`);
-        const near = g.lookAlikes(item.word, 2, rng);
-        const far = g.unlikeWords(item.word, 2, rng);
-        const avg = list => list.reduce((n, w) => n + g.similarity(item.word, w), 0) / list.length;
-        assert.ok(avg(near) > avg(far), `${item.word}: look-alikes ${near} are no closer than ${far}`);
+        for (const tier of [0, 1, 2, 3]) {
+            for (const n of [3, 4]) {
+                for (let k = 0; k < 8; k++) {
+                    const gate = g.buildGate(item, tier, rng, -1, n);
+                    gates++;
+                    for (const p of g.fairnessProblems(gate.plates, item.word, gate.mode)) problems.push(`${gate.plates.join('/')}: ${p}`);
+                }
+            }
+        }
     }
-    console.log('   e.g. ' + ['the', 'of', 'put', 'chop', 'tank'].map(w => `${w} ~ ${g.lookAlikes(w, 2, rng).join('/')}`).join(', '));
+    // First letter and length are the shortcuts he really used: never. Odd-one-in is rare and
+    // tested by the shortcut players below.
+    const hard = problems.filter(p => !/odd one in/.test(p));
+    assert.deepStrictEqual(hard.slice(0, 5), [], `${hard.length} of ${gates} gates give the word away`);
+    const odd = problems.length - hard.length;
+    assert.ok(odd / gates < 0.05, `${odd} of ${gates} gates have the target as the odd one in`);
+    console.log('   e.g. ' + ['buses', 'be', 'thump', 'children', 'said', 'to'].map(w => g.buildGate(ALL_ITEMS.find(i => i.word === w), 1, rng, -1, 3).plates.join('/')).join(', '));
+});
+
+await test('fair plates: the bad gate from the screenshot (be / thump / we) can no longer happen', () => {
+    const rng = mulberry32(3);
+    for (const w of ['be', 'we', 'buses', 'thump']) {
+        const item = ALL_ITEMS.find(i => i.word === w);
+        for (let k = 0; k < 200; k++) {
+            const { plates } = g.buildGate(item, k % 4, rng, -1, 3 + (k % 2));
+            assert.ok(plates.every(p => Math.abs(p.length - w.length) <= 1 || (w.length <= 2 && p.length === 2)), `${w}: ${plates}`);
+            if (w.length > 2) assert.ok(plates.every(p => p[0] === w[0]), `${w}: ${plates}`);
+            else assert.ok(plates.some(p => p !== w && p[0] === w[0]), `${w}: ${plates}`);
+        }
+    }
+});
+
+await test('fair plates: alien words only when real words run out, at most one, never a sound-alike or rude', () => {
+    const rng = mulberry32(4);
+    const needAliens = new Set();
+    for (const item of ALL_ITEMS) {
+        for (let k = 0; k < 40; k++) {
+            const gate = g.buildGate(item, k % 4, rng, -1, 3 + (k % 2));
+            const aliens = gate.plates.filter(w => w !== item.word && g.isAlien(w));
+            assert.ok(aliens.length <= 1, `${item.word}: ${gate.plates}`);
+            if (aliens.length) needAliens.add(item.word);
+            for (const a of aliens) {
+                assert.ok(!soundsSame(a, item.word), a);
+                assert.ok(d.whyReadable(a), `${a} must be decodable`);
+            }
+        }
+    }
+    // Only two-letter words (to, go, we…) have no real same-start partner. Any other word on
+    // this list needs more real words in quest/wordbank.js.
+    const long = [...needAliens].filter(w => w.length > 2);
+    assert.deepStrictEqual(long, [], 'add real words to quest/wordbank.js for these');
+    console.log(`   alien words used only for: ${[...needAliens].join(', ')} (e.g. to → ${g.alienWords('to').join(', ')})`);
+    for (const item of ALL_ITEMS) for (const a of g.alienWords(item.word)) assert.ok(a[0] === item.word[0].toLowerCase() && a.length === item.word.length, a);
+});
+
+await test('fair plates: a miss shows which letters differ', () => {
+    assert.deepStrictEqual(letterDiff('boxes', 'buses'), [[true, false, false, true, true], [true, false, false, true, true]]);
+    const [a, b] = letterDiff('bunk', 'buses');
+    assert.deepStrictEqual(a, [true, true, false, false]);
+    assert.strictEqual(b.filter(x => !x).length, 3);
 });
 
 await test('gates: a hear-it gate never shows a sound-alike (to / too, there / their)', () => {
@@ -145,9 +204,11 @@ await test('gates: a sentence gate has no other word that fits the gap, except t
         assert.strictEqual(gate.mode, 'sentence');
         assert.ok(gate.clue.includes('___'));
         const others = gate.plates.filter(w => w !== item.word);
-        const allowed = { there: 'their', their: 'there' }[item.word];
-        for (const w of others) assert.ok(!tricky.has(w.toLowerCase()) || w === allowed, `${item.word}: ${w} could fit “${item.clue}”`);
-        if (allowed) assert.ok(others.includes(allowed), `${item.word} is tested against ${allowed}`);
+        const partner = { there: 'their', their: 'there' }[item.word];
+        // Mr has no same-start word that is not tricky; my / me cannot fit "___ Smith".
+        const allowed = [partner, ...(item.word === 'Mr' ? ['my', 'me'] : [])];
+        for (const w of others) assert.ok(!tricky.has(w.toLowerCase()) || allowed.includes(w), `${item.word}: ${w} could fit “${item.clue}”`);
+        if (partner) assert.ok(others.includes(partner), `${item.word} is tested against ${partner}`);
     }
 });
 
@@ -346,13 +407,30 @@ await test('run: hammering trips the overheat guard, careful play does not', () 
 
 // ---------- Guessing cannot win (design §5) ----------
 
-function play(levelIndex, rng, knows) {
-    // knows: chance that he really knows each gate's word; otherwise he taps at random.
+// Shortcut players: they know only how the word starts and how long it sounds, never the
+// whole word. Each picks at random among the plates its shortcut leaves.
+const pickAmong = (plates, keep, rng) => {
+    const idx = plates.map((_, i) => i).filter(i => keep(plates[i]));
+    const from = idx.length ? idx : plates.map((_, i) => i);
+    return from[Math.floor(rng() * from.length)];
+};
+const centre = plates => plates.map((w, i) => plates.reduce((n, o, j) => n + (i === j ? 0 : g.similarity(w, o)), 0));
+const SHORTCUTS = {
+    random: (gate, rng) => Math.floor(rng() * gate.plates.length),
+    firstLetter: (gate, rng) => pickAmong(gate.plates, w => w[0].toLowerCase() === gate.word[0].toLowerCase(), rng),
+    length: (gate, rng) => pickAmong(gate.plates, w => w.length === gate.word.length, rng),
+    firstAndLength: (gate, rng) => pickAmong(gate.plates, w => w[0].toLowerCase() === gate.word[0].toLowerCase() && w.length === gate.word.length, rng),
+    firstLengthLast: (gate, rng) => pickAmong(gate.plates, w => w[0].toLowerCase() === gate.word[0].toLowerCase() && w.length === gate.word.length && w.at(-1) === gate.word.at(-1), rng),
+    oddOneIn: (gate, rng) => { const c = centre(gate.plates); const top = Math.max(...c); return pickAmong(gate.plates, w => c[gate.plates.indexOf(w)] === top, rng); }
+};
+
+function play(levelIndex, rng, knows, shortcut = SHORTCUTS.random) {
+    // knows: chance that he really knows each gate's word; otherwise he uses the shortcut.
     const run = createRun({ levelIndex, state: fresh(), rng, now: () => T0 });
     for (;;) {
         while (run.status === 'running') {
             const gate = run.currentGate();
-            run.answer(rng() < knows ? gate.correctIndex : Math.floor(rng() * gate.plates.length));
+            run.answer(rng() < knows ? gate.correctIndex : shortcut(gate, rng));
         }
         if (run.status === 'done') return run.stars;
         if (!run.canContinue()) return 0;
@@ -646,6 +724,40 @@ await test('screens: powering down twice on a level opens the Training Bay, then
     assert.ok(/Training done/.test(el.textContent));
     el.querySelector('#tq-go').click();
     assert.ok(el.querySelector('.tq-canvas'), 'back in the level');
+});
+
+await test('shortcuts: first letter, length, both, and odd-one-in do no better than tapping at random', () => {
+    if (process.env.QUICK) return; // QUICK=1 skips this slow test while editing
+    const N = 300;
+    const rows = [];
+    for (const [name, shortcut] of Object.entries(SHORTCUTS)) {
+        let done = 0, right = 0, gates = 0;
+        for (let li = 0; li < LEVELS.length; li++) {
+            const rng = mulberry32(500 + li);
+            for (let i = 0; i < N; i++) if (play(li, rng, 0, shortcut)) done++;
+            // Per-gate hit rate, over every stage's gates.
+            for (let i = 0; i < 40; i++) {
+                const run = createRun({ levelIndex: li, state: fresh(), rng, now: () => T0 });
+                const gate = run.currentGate();
+                // Two-letter words: first + last letter is the whole word, so that is reading.
+                if (gate.word.length <= 2) continue;
+                gates++;
+                if (shortcut(gate, rng) === gate.correctIndex) right++;
+            }
+        }
+        rows.push({ name, finish: done / (N * LEVELS.length), hit: right / gates });
+    }
+    for (const r of rows) console.log(`   ${r.name.padEnd(16)} right first time ${(100 * r.hit).toFixed(0).padStart(3)}% of gates, finishes ${(100 * r.finish).toFixed(1)}% of stages`);
+    const random = rows.find(r => r.name === 'random');
+    for (const r of rows) {
+        // A two-letter word is read by its two letters, so a first-and-last-letter player
+        // gets those right; that is reading, and they are a small share of gates.
+        // First + last letter + length: some words have no same-ending partner, so this player does
+        // a little better; it still has to look at the middle of most words.
+        const slack = r.name === 'firstLengthLast' ? 0.15 : 0.06;
+        assert.ok(r.hit <= random.hit + slack, `${r.name} beats random: ${(100 * r.hit).toFixed(0)}% vs ${(100 * random.hit).toFixed(0)}%`);
+        assert.ok(r.finish < (r.name === 'firstLengthLast' ? 0.2 : 0.05), `${r.name} finishes ${(100 * r.finish).toFixed(1)}% of stages`);
+    }
 });
 
 console.log(failures ? `\n${failures} Torch Quest test(s) failed` : '\nAll Torch Quest tests passed');

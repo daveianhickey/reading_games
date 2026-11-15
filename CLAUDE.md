@@ -88,13 +88,35 @@ Reading games for young children, built with vanilla JS + Vite (no framework).
 
 | File | Role |
 | --- | --- |
-| `quest/content.js` | `WORLDS` → levels → items, each world's skill settings (plates, gate floor, flag, obstacles, boss), `HOMOPHONES`, `DISTRACTOR_WORDS`. `LEVELS` is every stage in order (5 levels + boss per world). |
+| `quest/content.js` | `WORLDS` → levels → items, each world's skill settings (plates, gate floor, flag, obstacles, boss), `HOMOPHONES`, `DISTRACTOR_WORDS` (older wrong-plate list). `LEVELS` is every stage in order (5 levels + boss per world). |
 | `quest/mastery.js` | Pure logic: tiers (Scrap → Gold), 3 ticks to go up, one tier per day, rust, `pickGateItems`, level / world / boss-door unlocks. Storage `y1Quest`. |
-| `quest/gates.js` | Pure logic: builds a gate's plates for a word at a tier (different words, look-alikes, flash-and-find, Gold sentence). No sound-alikes in hear-it gates. |
+| `quest/gates.js` | Pure logic: builds a gate's plates for a word at a tier (hear it, look-alikes, flash-and-find, Gold sentence) with the fair-plate rules (design §5a): same first letter, same length, same ending where possible, no odd-one-in, no sound-alikes; alien words only for two-letter words. |
+| `quest/wordbank.js` | `WORD_BANK`: ~600 wrong-plate words (not targets, not from school, never scored; see below). Add words here if the alien-word test names a 3+ letter target. |
 | `quest/run.js` | Pure logic: one attempt at a level: hearts, one answer per gate, mid-level flag, stars, overheat guard. |
 | `quest/level.js`, `quest/runner.js` | Seeded course generator and the canvas runner (auto-run, tap to jump, a `THEMES` look per world, boss drone). Bumps cost bolts, never hearts. |
 | `quest/index.js` | `initTorchQuest(container, words, onBack)`: world map, level, plates, boss fuse, power-down, flag and Training Bay screens. |
 | `test-quest.js` | Rules, a guessing bot (must almost never finish a level) and screen tests (part of `npm test`). |
+
+**Two kinds of words in Torch Quest (keep them apart):**
+- **Target words** are what he is learning: the only words that are spoken, tested, scored and
+  turned into word blocks. They come **only** from the school lists: the focus words and focus
+  sounds in `docs/curriculum/year1-focus-weak-spots.md` (via `phonics/curriculum.js`), with each
+  sound practised through decodable example words. They live in `WORLDS` in `quest/content.js`.
+- **Wrong-plate words** are never the answer, never taught and never scored. They exist so
+  wrong plates can follow the fair-plate rules (same first letter, same length, same ending where
+  possible; design doc §5a). They are **not** from the school: they were chosen by hand and
+  checked as decodable. They live in `WORD_BANK` (`quest/wordbank.js`) and the older
+  `DISTRACTOR_WORDS` (`quest/content.js`). Target words are also used as wrong plates for each
+  other.
+- To change what he learns, edit the curriculum and `WORLDS`, never the word bank. To fix a gate
+  that lacks good wrong plates, add words to `WORD_BANK`, never new targets. Rules for bank
+  words: a real, everyday word a 5-year-old might meet; decodable (the test checks); nothing
+  rude, scary or adult; not a sound-alike of a target (add pairs to `HOMOPHONES`); lower case
+  (titles like *Mr* stand out). The parent may prune the bank; the tests say if a target is
+  left short.
+- Don't loosen the fair-plate rules in `quest/gates.js` to make a gate easier: they stop the
+  first-letter and length shortcuts he really used. The shortcut-player test in
+  `test-quest.js` must stay green.
 
 To add a level: add it to a world in `WORLDS` in `quest/content.js` (2–4 focus words and one or
 two focus GPCs with decodable words) and run `npm test`, which checks every word, coverage of
