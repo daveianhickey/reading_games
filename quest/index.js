@@ -25,14 +25,14 @@ const CSS = `
 .tq-pip { width: 3cqw; height: 3cqw; border-radius: .6cqw; background: rgba(255,255,255,.25); border: .4cqw solid rgba(0,0,0,.35); }
 .tq-pip.ok { background: #7CFC8A; } .tq-pip.no { background: #ff5d5d; } .tq-pip.now { background: #ffd23f; }
 .tq-pipflag { font-size: 3cqw; }
-.tq-gate { position: absolute; inset: 11% 0 auto 0; display: flex; flex-direction: column; align-items: center; gap: 2cqw; }
+.tq-gate { position: absolute; inset: 13% 0 auto 0; display: flex; flex-direction: column; align-items: center; gap: 2cqw; }
 .tq-gate[hidden], .tq-overlay[hidden] { display: none; }
 .tq-prompt { min-height: 11cqw; display: flex; align-items: center; justify-content: center; }
-.tq-speak { width: 10cqw; height: 10cqw; min-width: 64px; min-height: 64px; border-radius: 50%; border: .6cqw solid #1d2433; background: #ffd23f; font-size: 5cqw; cursor: pointer; box-shadow: 0 .8cqw 0 #b8860b; }
+.tq-speak { width: 9cqw; height: 9cqw; min-width: 64px; min-height: 64px; border-radius: 50%; border: .6cqw solid #1d2433; background: #ffd23f; font-size: 5cqw; cursor: pointer; box-shadow: 0 .8cqw 0 #b8860b; }
 .tq-flash { background: #0d1b12; color: #7CFC8A; border: .8cqw solid #59627a; border-radius: 2cqw; padding: 0 6cqw; font: 700 8cqw 'Andika', 'Outfit', sans-serif; min-width: 30cqw; text-align: center; }
 .tq-plates { display: flex; gap: 3cqw; justify-content: center; width: 92%; }
-.tq-plates .tq-plate { flex: 0 1 26cqw; min-width: 0; }
-.tq-plates.long .tq-plate { font-size: 6cqw; }
+.tq-plates .tq-plate { flex: 0 1 26cqw; min-width: 0; font-size: var(--fs, 7cqw); white-space: nowrap; overflow: hidden; }
+/* Every plate in a gate has the same box and the same font size, so neither gives the length away. */
 .tq-plate { min-width: 24cqw; min-height: max(72px, 13cqw); padding: 0 3cqw; border-radius: 2cqw; border: .7cqw solid #1d2433; background: #f4f1e8; color: #1d2433;
   font: 700 7.5cqw 'Andika', 'Outfit', sans-serif; cursor: pointer; box-shadow: 0 1.2cqw 0 #8d8a80; transition: transform .15s, opacity .2s, background .2s; }
 .tq-plate.locked { opacity: .55; }
@@ -65,8 +65,12 @@ const CSS = `
 .tq-block.new { background: #2a2d48; color: #59627a; }
 .tq-block.rusty::after { content: ''; position: absolute; inset: 0; border-radius: 3px; background: repeating-linear-gradient(45deg, rgba(139,69,19,.55) 0 6px, transparent 6px 14px); }
 .tq-note { font-size: 15px; color: #aab3c5; margin-top: 14px; font-weight: 600; }
-.tq-plates.four { gap: 2cqw; } .tq-plates.four .tq-plate { flex-basis: 21cqw; padding: 0 1cqw; font-size: 6cqw; }
-.tq-plates.four.long .tq-plate { font-size: 4.8cqw; }
+.tq-plates.four { gap: 2cqw; } .tq-plates.four .tq-plate { flex-basis: 21cqw; padding: 0 1cqw; }
+.tq-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.tq-compare { display: flex; gap: 4cqw; justify-content: center; margin-top: 1cqw; font: 700 5cqw 'Andika', 'Outfit', sans-serif; }
+.tq-compare span { background: rgba(0,0,0,.55); border-radius: 1.2cqw; padding: .4cqw 2cqw; }
+.tq-compare .no { color: #ff8a80; } .tq-compare .yes { color: #7CFC8A; }
+.tq-compare b { text-decoration: underline; text-decoration-thickness: .6cqw; text-underline-offset: .8cqw; }
 .tq-sentence { background: #f4f1e8; color: #1d2433; border: .7cqw solid #1d2433; border-radius: 2cqw; padding: 1cqw 3cqw; font: 700 5.5cqw 'Andika', 'Outfit', sans-serif; display: flex; align-items: center; gap: 2cqw; }
 .tq-sentence .gap { display: inline-block; min-width: 14cqw; border-bottom: .8cqw solid #e8402f; margin: 0 1cqw; }
 .tq-fuse { position: absolute; left: 20%; right: 20%; top: 12.5cqw; height: 1.6cqw; border-radius: 1cqw; background: rgba(0,0,0,.4); overflow: hidden; }
@@ -93,7 +97,23 @@ const CSS = `
 .tq-learn { font: 700 14cqw 'Andika', 'Outfit', sans-serif; color: #fff; }
 .tq-plate.hint { box-shadow: 0 0 0 1cqw #ffd23f, 0 1.2cqw 0 #8d8a80; }
 .tq-turn { display: none; }
-@media (orientation: portrait) { .tq-turn { display: block; } }
+@media (orientation: portrait) {
+  .tq-turn { display: block; }
+  /* Portrait phone: the game sits at the top and the word gate gets the empty space below it,
+     so nothing covers Torch or the progress bar, and plates are big, full-width buttons. */
+  .tq-root { align-items: flex-start; padding-top: max(12px, 6vh); }
+  .tq-stage { overflow: visible; }
+  .tq-gate { inset: calc(100% + 5cqw) 0 auto 0; gap: 3.5cqw; }
+  .tq-speak { width: 16cqw; height: 16cqw; font-size: 8cqw; }
+  .tq-flash { font-size: 12cqw; }
+  .tq-sentence { font-size: 7cqw; }
+  .tq-plates, .tq-plates.four { flex-direction: column; align-items: center; gap: 3cqw; }
+  .tq-plates .tq-plate, .tq-plates.four .tq-plate { flex: none; width: 76cqw; min-height: 17cqw; font-size: var(--fs-tall, 10cqw); }
+  .tq-msg { font-size: 6cqw; text-align: center; }
+  .tq-compare { font-size: 8cqw; }
+  .tq-fuse { top: calc(56.25cqw + 1cqw); left: 12%; right: 12%; height: 2.2cqw; }
+  .tq-overlay { position: fixed; }
+}
 @media (prefers-reduced-motion: reduce) { .tq-plate, .tq-hearts span { transition: none; } }
 `;
 
@@ -103,6 +123,31 @@ function ensureStyles() {
     style.id = 'tq-styles';
     style.textContent = CSS;
     document.head.appendChild(style);
+}
+
+// Which letters of a and b differ (by edit-distance alignment). Returns [aMarks, bMarks].
+export function letterDiff(a, b) {
+    const n = a.length, m = b.length;
+    const d = Array.from({ length: n + 1 }, (_, i) => Array.from({ length: m + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)));
+    for (let i = 1; i <= n; i++) for (let j = 1; j <= m; j++) {
+        d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    const am = Array(n).fill(true), bm = Array(m).fill(true);
+    let i = n, j = m;
+    while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && d[i][j] === d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)) {
+            if (a[i - 1] !== b[j - 1]) { am[i - 1] = false; bm[j - 1] = false; }
+            i--; j--;
+        } else if (i > 0 && d[i][j] === d[i - 1][j] + 1) { am[i - 1] = false; i--; }
+        else { bm[j - 1] = false; j--; }
+    }
+    return [am, bm];
+}
+
+function compareHTML(picked, word) {
+    const [pm, wm] = letterDiff(picked, word);
+    const mark = (w, marks) => [...w].map((ch, k) => (marks[k] ? ch : `<b>${ch}</b>`)).join('');
+    return `<div class="tq-compare" aria-hidden="true"><span class="no">✗ ${mark(picked, pm)}</span><span class="yes">✓ ${mark(word, wm)}</span></div>`;
 }
 
 const starText = n => '★'.repeat(n) + '☆'.repeat(3 - n);
@@ -318,7 +363,11 @@ export function initTorchQuest(container, words, onBack, opts = {}) {
             $('.tq-msg').textContent = '';
             $('.tq-plates').innerHTML = gate.plates.map((w, i) => `<button class="tq-plate locked" data-i="${i}">${w}</button>`).join('');
             $('.tq-plates').classList.toggle('four', gate.plates.length > 3);
-            $('.tq-plates').classList.toggle('long', Math.max(...gate.plates.map(w => w.length)) >= 6);
+            // One font size for the whole gate, set by its longest word, so every word fits.
+            const longest = Math.max(...gate.plates.map(w => w.length));
+            const across = gate.plates.length > 3 ? 29 : 31;
+            $('.tq-plates').style.setProperty('--fs', `${Math.min(7, across / longest).toFixed(2)}cqw`);
+            $('.tq-plates').style.setProperty('--fs-tall', `${Math.min(10, 120 / longest).toFixed(2)}cqw`);
             $('.tq-plates').querySelectorAll('.tq-plate').forEach(b => b.addEventListener('click', () => choose(Number(b.dataset.i))));
             const unlock = () => {
                 locked = false;
@@ -380,7 +429,10 @@ export function initTorchQuest(container, words, onBack, opts = {}) {
                 plates[index]?.classList.add('wrong');
                 plates[res.correctIndex].classList.add('reveal');
                 sfx.thud();
-                $('.tq-msg').textContent = index < 0 ? `Too slow! It was “${res.word}”.` : `This one is “${res.word}”.`;
+                // Show where the two words differ, so a miss teaches him to look past the first letter.
+                // (The right word is also said aloud.)
+                if (index < 0) $('.tq-msg').textContent = `Too slow! It was “${res.word}”.`;
+                else $('.tq-msg').innerHTML = `<span class="tq-sr">This one is “${res.word}”.</span>${compareHTML(plates[index].textContent, res.word)}`;
                 say(res.word);
             }
             hud();
@@ -398,7 +450,7 @@ export function initTorchQuest(container, words, onBack, opts = {}) {
                 $('.tq-msg').textContent = 'Too fast! Slow down and look.';
                 say('Slow down. Look.');
                 later(next, opts.overheatMs ?? 2500);
-            }, res.correct ? Math.min(feedbackMs, 700) : feedbackMs);
+            }, res.correct ? Math.min(feedbackMs, 700) : feedbackMs + (index >= 0 ? Math.min(feedbackMs, 800) : 0));
         }
 
         function showDown() {

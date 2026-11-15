@@ -90,7 +90,8 @@ Reading games for young children, built with vanilla JS + Vite (no framework).
 | --- | --- |
 | `quest/content.js` | `WORLDS` → levels → items, each world's skill settings (plates, gate floor, flag, obstacles, boss), `HOMOPHONES`, `DISTRACTOR_WORDS`. `LEVELS` is every stage in order (5 levels + boss per world). |
 | `quest/mastery.js` | Pure logic: tiers (Scrap → Gold), 3 ticks to go up, one tier per day, rust, `pickGateItems`, level / world / boss-door unlocks. Storage `y1Quest`. |
-| `quest/gates.js` | Pure logic: builds a gate's plates for a word at a tier (different words, look-alikes, flash-and-find, Gold sentence). No sound-alikes in hear-it gates. |
+| `quest/gates.js` | Pure logic: builds a gate's plates for a word at a tier (hear it, look-alikes, flash-and-find, Gold sentence) with the fair-plate rules (design §5a): same first letter, same length, same ending where possible, no odd-one-in, no sound-alikes; alien words only for two-letter words. |
+| `quest/wordbank.js` | ~600 real words he can decode, used as wrong plates. Add words here if the alien-word test names a 3+ letter target. |
 | `quest/run.js` | Pure logic: one attempt at a level: hearts, one answer per gate, mid-level flag, stars, overheat guard. |
 | `quest/level.js`, `quest/runner.js` | Seeded course generator and the canvas runner (auto-run, tap to jump, a `THEMES` look per world, boss drone). Bumps cost bolts, never hearts. |
 | `quest/index.js` | `initTorchQuest(container, words, onBack)`: world map, level, plates, boss fuse, power-down, flag and Training Bay screens. |
