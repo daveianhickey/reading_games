@@ -1,8 +1,14 @@
-// Torch Quest wrong-plate word bank: real, child-friendly words he can decode
-// (every one passes whyReadable in stories/decodable.js, checked by test-quest.js).
-// Grouped by first letter, because every wrong plate must start like the target and be
-// about the same length (docs/torch-quest-design.md §5a). Add words here when a target
-// has too few partners; the test lists any target that has to borrow alien words.
+// Torch Quest wrong-plate word bank. These words are NEVER the answer: they are not taught,
+// not spoken as targets, not scored and not from the school's lists. Target words (what he
+// learns) come only from the curriculum, in WORLDS in quest/content.js. See
+// docs/torch-quest-design.md §4 "Two kinds of words" and §5a.
+//
+// The bank exists so every wrong plate can start like the target and be the same length
+// (and end the same where possible). Rules for adding a word: a real, everyday word a
+// 5-year-old might meet; decodable (every word must pass whyReadable in stories/decodable.js,
+// checked by test-quest.js); nothing rude, scary or adult; not a sound-alike of a target (add
+// the pair to HOMOPHONES); lower case. Add words when a target has too few partners: the tests
+// list any 3+ letter target that has to borrow alien words. Removing words is safe too.
 export const WORD_BANK = [
     // a
     'am', 'an', 'as', 'at', 'add', 'and', 'ant', 'arm', 'art', 'acted', 'added', 'aimed',

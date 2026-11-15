@@ -118,8 +118,21 @@ a coin toss. A sentence gate is the opposite: there the sound-alike is the best 
 Sentence gates never use another tricky word as a wrong plate, because many would also fit the
 gap (*his / her / my* in “___ dog is big”).
 
-Wrong plates are picked, not hand-written, from the curriculum words and a bank of about 600
-real words he can decode (`quest/wordbank.js`), following the rules in §5a.
+**Two kinds of words.** Keep them apart in every future change:
+
+| | Target words | Wrong-plate words |
+| --- | --- | --- |
+| What they are | What he is learning | Words that are never the answer |
+| Where they come from | **Only** the school lists: focus words and focus sounds (`docs/curriculum/year1-focus-weak-spots.md`), each sound practised through decodable example words | Chosen by hand for this game, **not** from school, each checked as decodable |
+| Where they live | `WORLDS` in `quest/content.js` (157 different words across 5 worlds) | `WORD_BANK` in `quest/wordbank.js` (~600) and the older `DISTRACTOR_WORDS` in `quest/content.js`; target words also serve as wrong plates for each other |
+| Spoken, tested, scored, made into blocks | Yes | Never |
+| Change them when | The school's list changes | A gate lacks fair wrong plates (§5a) |
+
+Wrong plates are picked by code, not written per gate, following the rules in §5a. Bank words
+must be real, everyday words a 5-year-old might meet, decodable, nothing rude, scary or adult,
+not a sound-alike of a target (add the pair to `HOMOPHONES` in `quest/content.js`), and in lower
+case. Adding a word to the bank never changes what he learns. Pruning it is safe: the tests
+report any target left without enough partners.
 
 ---
 
@@ -370,7 +383,8 @@ Vanilla JS and Vite like the rest of the app, no new dependencies.
 | --- | --- |
 | `quest/content.js` | Worlds → levels → item ids (from `phonics/curriculum.js`), decodable words per GPC. |
 | `quest/mastery.js` | Pure logic: tiers, ticks, one-tier-per-day, rust, picking a level's 8 gate items. Storage key `y1Quest`. |
-| `quest/gates.js` | Pure logic: build a gate for an item at a tier, look-alike distractors, plate positions. |
+| `quest/gates.js` | Pure logic: build a gate for an item at a tier with the fair-plate rules (§5a), plate positions, alien words. |
+| `quest/wordbank.js` | Wrong-plate words only (§4, “Two kinds of words”). |
 | `quest/level.js` | Level generator: strings terrain segments and gates together from a seed. |
 | `quest/runner.js` | Canvas 2D game loop (fixed timestep), Torch physics, collisions, camera, sprites. |
 | `quest/index.js` | DOM layer over the canvas: plates (real buttons, so they are crisp and accessible), hearts, map, boss fuse, Training Bay. |

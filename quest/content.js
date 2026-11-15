@@ -127,7 +127,8 @@ export function soundsSame(a, b) {
     return x === y || HOMOPHONES.some(g => g.includes(x) && g.includes(y));
 }
 
-// Extra real, readable words used only as wrong plates (look-alikes of the targets).
+// Wrong-plate words (older list; the main bank is WORD_BANK in quest/wordbank.js). Never targets,
+// never scored, not from the school's lists. Same rules as the bank: see that file's header.
 export const DISTRACTOR_WORDS = [
     'they', 'then', 'them', 'ten', 'top', 'got', 'no', 'dog', 'on', 'in', 'it', 'tin', 'not',
     'off', 'if', 'pat', 'but', 'pot', 'pit', 'pill', 'bull', 'full', 'bush', 'rush', 'posh',
