@@ -7,6 +7,8 @@ import { LEVELS } from './content.js';
 
 export const MAX_HEARTS = 3;
 export const HEAL_STREAK = 5;
+// Three right answers in a row: Torch transforms into his car until the next miss (design §13c).
+export const TURBO_STREAK = 3;
 export const CHECKPOINT_AFTER = GATES_PER_LEVEL / 2;
 const CHECKPOINT_MIN_HEARTS = 2;
 
@@ -33,6 +35,8 @@ export function createRun({ levelIndex, state, rng = Math.random, now = () => Da
         boss: lvl.boss,
         checkpoint,
 
+        get turbo() { return run.streak >= TURBO_STREAK; },
+
         currentGate() {
             if (!gate && run.status === 'running') {
                 const item = items[run.gateIndex];
@@ -53,12 +57,15 @@ export function createRun({ levelIndex, state, rng = Math.random, now = () => Da
             const rec = recordAnswer(state, g.item.id, correct, now());
             const out = { correct, correctIndex: g.correctIndex, word: g.word, healed: false, promoted: rec.promoted, demoted: rec.demoted, tier: rec.tier };
             run.results[run.gateIndex] = correct;
+            const wasTurbo = run.turbo;
             if (correct) {
                 run.streak++;
+                if (!wasTurbo && run.turbo) out.turboOn = true;
                 if (rec.promoted) run.promoted.push({ word: g.word, tier: rec.tier });
                 if (run.streak % HEAL_STREAK === 0 && run.hearts < MAX_HEARTS) { run.hearts++; out.healed = true; }
             } else {
                 run.streak = 0;
+                if (wasTurbo) out.turboOff = true;
                 run.hearts--;
                 if (!run.missed.includes(g.word)) run.missed.push(g.word);
                 // The missed word comes back two gates later, with new plates.

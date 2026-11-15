@@ -436,7 +436,7 @@ setting per world (`obstacles` in `quest/content.js`).
 
 ---
 
-## 13. Keeping him keen (proposal, not built)
+## 13. Keeping him keen (partly built)
 
 The fair-plate rules (§5a) made the gates honest, which also made them harder. He needs more
 reason to push through the harder reading, and more fun around it. Three asks from the parent:
@@ -530,7 +530,25 @@ Bolts finally buy things:
 
 Prices are tuned so a good level buys one small thing.
 
-### 13f. Suggested build order
+### 13f. What is built (parent's choice: Turbo, and Forge + mystery crates)
+
+- **Turbo (13c.1), built.**
+  - Three right answers in a row fill the ⚡ meter in the HUD, and Torch transforms into his car (pixel car with a flame trail, an engine roar and “⚡ TURBO!”).
+  - In car mode he runs about 60% faster, smashes crates for a bolt instead of bouncing off, and pulls in bolts from about three times as far.
+  - The next wrong answer, or going back to the flag, ends it.
+  - It never touches the gates: the same seed gives the same plates with or without Turbo (tested), and every course can be cleared at car speed (tested).
+  - Code: `TURBO_STREAK` and `run.turbo` in `quest/run.js`; `setTurbo` in `quest/runner.js`.
+- **The Forge (13b), built.**
+  - At the flag, each word that went up a tier this run gets a forge screen: the block sits on an anvil in its old metal, and he taps 🔨 three times (sparks, clangs).
+  - It comes out in its new metal with a glow, and the word is said aloud.
+  - Gold gets bigger sparks, the slam sound and a fanfare.
+- **Mystery crate (13b), built.**
+  - After the forge, a wobbling crate: tap to open. Usually 5 or 10 bolts, sometimes a 25-bolt pile, sometimes a sticker from the hub's sticker collection.
+  - A 3-star level doubles the sticker chance (30% instead of 15%); a boss always gives a sticker, or 30 bolts if he owns them all.
+  - Code: `quest/rewards.js`.
+- **Not built yet:** hints (13a), Silver Torch parts and the morning delivery (13b), course elements and bolt rain (13c.2–6), the Workshop and shop (13d, 13e).
+
+### 13g. Suggested build order
 
 1. **First (biggest effect for the effort):**
    - Turbo transform for a 3-in-a-row reading streak (13c.1).
