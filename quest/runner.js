@@ -6,6 +6,9 @@ export const VIEW = { w: 400, h: 225 };
 const SPEED = 110;
 const TURBO_SPEED = 175;   // car mode
 const MAGNET = 42;         // car mode pulls in bolts from this far away
+const RAMP_W = 48, RAMP_H = 24, RAMP_V = -330; // ramp size and the car's launch speed
+// Ground the ramp jump covers: the ramp, the flight and the landing. Kept clear of holes and crates.
+const RAMP_SPAN = RAMP_W + 260;
 const GRAVITY = 720;
 const JUMP_V = -265;
 const GATE_STOP = 52;   // Torch stops this far in front of a gate
@@ -90,13 +93,16 @@ export const THEMES = {
 
 const hash = n => { const s = Math.sin(n * 127.1) * 43758.5453; return s - Math.floor(s); };
 
-export function createGame({ course, canvas, hooks = {}, autoJump = false, theme = 'scrap', boss = null }) {
+export function createGame({ course, canvas, hooks = {}, autoJump = false, theme = 'scrap', boss = null, flips = true }) {
+    course.ramps = course.ramps || [];
     const T = THEMES[theme] || THEMES.scrap;
     let ctx = null;
     try { ctx = canvas?.getContext?.('2d') || null; } catch (e) { ctx = null; }
     const torch = { x: 60, y: GROUND_Y, vy: 0, grounded: true };
     let mode = 'run'; // 'run' | 'gate' | 'finish'
     let gateI = 0, time = 0, knock = 0, blink = 0, sinceGround = 0, jumpBuffer = 0, ready = 0, flash = 0;
+    let flight = null; // { t, total } while the car is in the air off a ramp
+    let sparkle = 0;
     const bossHit = { t: 0 };
     let raf = null, last = 0;
 
@@ -110,6 +116,26 @@ export function createGame({ course, canvas, hooks = {}, autoJump = false, theme
         turbo: false,
         // Reading streak reward: faster, smashes crates, pulls in bolts. Jumping still works.
         setTurbo(on) { game.turbo = !!on; },
+        get flying() { return !!flight; },
+
+        // Five right in a row: a ramp just past the gate he is at. The stretch it covers is
+        // cleared of holes and crates, and a trail of bolts follows the jump.
+        addRamp() {
+            const gate = course.gates[gateI] || course.gates[course.gates.length - 1];
+            const x = Math.max(torch.x + 70, gate ? gate.x + 40 : torch.x + 70);
+            const clear = o => o.x + (o.w || 16) < x - 10 || o.x > x + RAMP_SPAN;
+            for (const list of [course.gaps, course.crates]) {
+                for (let i = list.length - 1; i >= 0; i--) if (!clear(list[i])) list.splice(i, 1);
+            }
+            const ramp = { x, w: RAMP_W, h: RAMP_H, used: false };
+            course.ramps.push(ramp);
+            // Bolts along the flight path (launch from the ramp top at car speed).
+            for (let k = 1; k <= 7; k++) {
+                const t = k * 0.13;
+                course.bolts.push({ x: x + RAMP_W + TURBO_SPEED * t, y: GROUND_Y - RAMP_H + RAMP_V * t + 360 * t * t - 14, taken: false });
+            }
+            return ramp;
+        },
         hitBoss() { if (boss && game.bossHp > 0) { game.bossHp--; bossHit.t = 0.5; } },
 
         jump() { if (mode === 'run') jumpBuffer = BUFFER; },
@@ -147,13 +173,34 @@ export function createGame({ course, canvas, hooks = {}, autoJump = false, theme
                 hooks.onJump?.();
             }
 
+            // On a ramp in car mode: drive up the slope, then launch off the top.
+            const ramp = course.ramps.find(r => !r.used && torch.x >= r.x && torch.x <= r.x + r.w);
+            if (ramp && !game.turbo) ramp.used = true; // only the car can use it
+            if (ramp && game.turbo && torch.vy >= 0 && torch.y >= GROUND_Y - ramp.h * ((torch.x - ramp.x) / ramp.w) - 3) {
+                torch.y = GROUND_Y - ramp.h * ((torch.x - ramp.x) / ramp.w);
+                torch.vy = 0; torch.grounded = true;
+                if (torch.x >= ramp.x + ramp.w - 2) {
+                    ramp.used = true;
+                    torch.vy = RAMP_V; torch.grounded = false; sinceGround = COYOTE;
+                    // Air time from the ramp top back to the ground, for the flip.
+                    const total = (-RAMP_V + Math.sqrt(RAMP_V * RAMP_V + 2 * GRAVITY * ramp.h)) / GRAVITY;
+                    flight = { t: 0, total };
+                    hooks.onLaunch?.();
+                }
+            }
+            if (flight) flight.t += dt;
+            sparkle = Math.max(0, sparkle - dt);
+
             const prevY = torch.y;
-            torch.vy += GRAVITY * dt;
-            torch.y += torch.vy * dt;
+            if (!(ramp && game.turbo && torch.grounded)) {
+                torch.vy += GRAVITY * dt;
+                torch.y += torch.vy * dt;
+            }
             const gap = course.gaps.find(g => !g.bridged && torch.x > g.x + 3 && torch.x < g.x + g.w - 3);
             if (torch.y >= GROUND_Y) {
                 if (!gap && prevY <= GROUND_Y + 1) {
                     torch.y = GROUND_Y; torch.vy = 0; torch.grounded = true; sinceGround = 0;
+                    if (flight) { flight = null; sparkle = 0.6; hooks.onLand?.(); }
                 } else {
                     torch.grounded = false;
                     if (gap) torch.x = Math.min(torch.x, gap.x + gap.w - 4);
@@ -168,7 +215,7 @@ export function createGame({ course, canvas, hooks = {}, autoJump = false, theme
                         if (g.falls >= 2) g.bridged = true;
                     }
                 }
-            } else {
+            } else if (!(ramp && game.turbo && torch.grounded)) {
                 torch.grounded = false;
                 sinceGround += dt;
             }
@@ -186,10 +233,10 @@ export function createGame({ course, canvas, hooks = {}, autoJump = false, theme
                 if (torch.vy > 0 && prevY <= GROUND_Y - h + 3) {
                     torch.y = GROUND_Y - h; torch.vy = -170; // hop off the top
                 } else if (knock <= 0) {
+                    // Walking into a crate bounces him back and spills bolts. It never breaks:
+                    // he has to jump it (parent's request). Only the Turbo car smashes crates.
                     knock = 0.35;
                     spill(2);
-                    c.hits = (c.hits || 0) + 1;
-                    if (c.hits >= 2) c.broken = true; // second bump smashes it
                 }
             }
 
@@ -240,6 +287,17 @@ export function createGame({ course, canvas, hooks = {}, autoJump = false, theme
                 if (g.bridged) { ctx.fillStyle = T.hole; ctx.fillRect(x, GROUND_Y + 3, g.w, VIEW.h); ctx.fillStyle = '#b5793a'; ctx.fillRect(x - 2, GROUND_Y, g.w + 4, 3); continue; }
                 ctx.fillStyle = T.hole; ctx.fillRect(x, GROUND_Y, g.w, VIEW.h - GROUND_Y);
                 ctx.fillStyle = '#f2a65a'; ctx.fillRect(x - 2, GROUND_Y, 2, 4); ctx.fillRect(x + g.w, GROUND_Y, 2, 4);
+            }
+            for (const r of course.ramps) {
+                const x = Math.floor(r.x - cam);
+                if (x > VIEW.w || x + r.w < 0) continue;
+                for (let i = 0; i < r.w; i++) {
+                    const h = Math.round(r.h * (i / r.w));
+                    ctx.fillStyle = Math.floor((i + (GROUND_Y - h)) / 6) % 2 ? '#ffd23f' : '#1d2433';
+                    ctx.fillRect(x + i, GROUND_Y - h, 1, h);
+                }
+                ctx.fillStyle = '#ff7a1a'; ctx.fillRect(x, GROUND_Y - 1, r.w, 2);
+                ctx.fillStyle = '#9aa5b1'; ctx.fillRect(x + r.w - 2, GROUND_Y - r.h, 2, r.h);
             }
             for (const c of course.crates) {
                 const x = Math.floor(c.x - cam);
@@ -304,7 +362,24 @@ export function createGame({ course, canvas, hooks = {}, autoJump = false, theme
                     ctx.fillStyle = k === 1 ? '#ffd23f' : '#ff7a1a';
                     ctx.fillRect(x - len, y + 6 + k * 3, len, 2);
                 }
-                drawSprite(ctx, CAR, x, y);
+                if (flight && flips) {
+                    // A full flip in the air off the ramp.
+                    const a = -Math.PI * 2 * Math.min(1, flight.t / flight.total);
+                    ctx.save();
+                    ctx.translate(x + 16, y + 9);
+                    ctx.rotate(a);
+                    drawSprite(ctx, CAR, -16, -9);
+                    ctx.restore();
+                } else {
+                    drawSprite(ctx, CAR, x, y);
+                }
+                if (sparkle > 0) {
+                    ctx.fillStyle = '#ffd23f';
+                    for (let k = 0; k < 8; k++) {
+                        const ang = (k / 8) * Math.PI * 2, d = 10 + (0.6 - sparkle) * 50;
+                        ctx.fillRect(Math.floor(x + 16 + Math.cos(ang) * d), Math.floor(y + 9 + Math.sin(ang) * d * 0.6), 2, 2);
+                    }
+                }
             } else if (blink <= 0 || Math.floor(time * 12) % 2) {
                 const legs = !torch.grounded ? LEGS.jump : mode !== 'run' ? LEGS.stand : Math.floor(time * 10) % 2 ? LEGS.runA : LEGS.runB;
                 drawSprite(ctx, [...BODY, ...legs], Math.floor(torch.x - cam - 12), Math.floor(torch.y - 32));
