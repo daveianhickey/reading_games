@@ -528,15 +528,110 @@ await test('runner: after a fall he comes back well before the hole and pauses',
     assert.ok(checked > 10);
 });
 
-await test('runner: never jumping costs bolts but never stops him reaching the gates', () => {
+await test('runner: walking into a crate never breaks it: he has to jump it (holes still get a plank)', () => {
     const course = buildCourse(7);
-    let bumps = 0, finished = false;
-    const game = createGame({ course, canvas: null, hooks: { onBump: () => bumps++, onFinish: () => { finished = true; } } });
-    for (let i = 0; i < 120 * 300 && game.mode !== 'gate'; i++) game.step(1 / 120);
-    assert.ok(bumps > 0, 'he bumps into things');
-    assert.strictEqual(game.mode, 'gate', 'obstacles give way after two bumps, so he still reaches the gate');
-    assert.ok(course.crates.some(c => c.broken) || course.gaps.some(g => g.bridged));
-    assert.ok(!finished);
+    const crate = course.crates.find(c => c.x > 200);
+    course.gaps.length = 0; // crates only
+    course.crates.splice(0, course.crates.length, crate);
+    let bumps = 0;
+    const game = createGame({ course, canvas: null, hooks: { onBump: () => bumps++ } });
+    for (let i = 0; i < 120 * 20; i++) game.step(1 / 120);
+    assert.ok(bumps >= 5, `he keeps bumping (${bumps})`);
+    assert.ok(!crate.broken, 'the crate is still there');
+    assert.ok(game.torch.x < crate.x, 'and he is still behind it');
+    game.jump();
+    for (let i = 0; i < 120 * 3; i++) game.step(1 / 120);
+    // One jump from right in front may not clear it after a bounce; keep tapping like a child would.
+    for (let k = 0; k < 10 && game.torch.x < crate.x + 20; k++) { game.jump(); for (let i = 0; i < 60; i++) game.step(1 / 120); }
+    assert.ok(game.torch.x > crate.x + 20, 'a jump gets him over');
+});
+
+// ---------- Ramp: five in a row ----------
+
+await test('ramp: 5 right in a row (and every 5 after) earns a ramp; the run logic is unchanged otherwise', () => {
+    const run = createRun({ levelIndex: LEVELS.findIndex(l => l.boss), state: fresh(), rng: mulberry32(51), now: () => T0 });
+    const ramps = [];
+    for (let i = 0; i < 10; i++) if (run.answer(run.currentGate().correctIndex).ramp) ramps.push(run.streak);
+    assert.deepStrictEqual(ramps, [5, 10]);
+    const r2 = createRun({ levelIndex: 0, state: fresh(), rng: mulberry32(52), now: () => T0 });
+    for (let i = 0; i < 4; i++) r2.answer(r2.currentGate().correctIndex);
+    const g = r2.currentGate();
+    r2.answer((g.correctIndex + 1) % g.plates.length);
+    for (let i = 0; i < 3; i++) assert.ok(!r2.answer(r2.currentGate().correctIndex).ramp, 'a miss resets the count');
+});
+
+await test('ramp: the car drives up, flips through the air, lands safely and collects bolts', () => {
+    for (let seed = 1; seed <= 30; seed++) {
+        const world = WORLDS[seed % WORLDS.length];
+        const course = buildCourse(seed, 8, 4, world.obstacles);
+        let launched = 0, landed = 0, bumps = 0, finished = false;
+        const game = createGame({ course, canvas: null, autoJump: true, hooks: { onLaunch: () => launched++, onLand: () => landed++, onBump: () => bumps++, onFinish: () => { finished = true; } } });
+        game.setTurbo(true);
+        const gi = 2 + (seed % 4);
+        // Drive to gate gi, earn a ramp there, then carry on.
+        for (let i = 0; i < 120 * 300 && !finished; i++) {
+            game.step(1 / 120);
+            if (game.mode === 'gate') {
+                if (game.gateIndex === gi) {
+                    const ramp = game.addRamp();
+                    const span = [ramp.x - 10, ramp.x + 308];
+                    assert.ok(!course.gaps.some(g => g.x + g.w > span[0] && g.x < span[1]), `seed ${seed}: hole under the jump`);
+                    assert.ok(!course.crates.some(c => c.x + 16 > span[0] && c.x < span[1]), `seed ${seed}: crate under the jump`);
+                }
+                game.openGate();
+            }
+        }
+        assert.ok(finished, `seed ${seed}: reached the flag`);
+        assert.strictEqual(launched, 1, `seed ${seed}: launched off the ramp`);
+        assert.strictEqual(landed, 1, `seed ${seed}: landed`);
+        assert.strictEqual(bumps, 0, `seed ${seed}: never fell`);
+    }
+    // The bolt trail sits on the flight path: a straight run up the ramp collects most of it.
+    const course = buildCourse(3, 8, 4, WORLDS[0].obstacles);
+    const game = createGame({ course, canvas: null, autoJump: true });
+    game.setTurbo(true);
+    let before = null;
+    for (let i = 0; i < 120 * 300; i++) {
+        game.step(1 / 120);
+        if (game.mode === 'gate') {
+            if (game.gateIndex === 1) { game.addRamp(); before = game.bolts; }
+            game.openGate();
+        }
+        if (before !== null && !game.flying && game.gateIndex === 2 && game.mode === 'gate') break;
+    }
+    assert.ok(game.bolts - before >= 5, `collected ${game.bolts - before} of the 7 jump bolts`);
+});
+
+await test('ramp: without Turbo the ramp is just ground (no launch)', () => {
+    const course = buildCourse(4, 8, 4, WORLDS[0].obstacles);
+    let launched = 0;
+    const game = createGame({ course, canvas: null, autoJump: true, hooks: { onLaunch: () => launched++ } });
+    game.setTurbo(true);
+    for (let i = 0; i < 120 * 60 && game.mode !== 'gate'; i++) game.step(1 / 120);
+    game.addRamp();
+    game.setTurbo(false);
+    game.openGate();
+    for (let i = 0; i < 120 * 20; i++) { game.step(1 / 120); if (game.mode === 'gate') game.openGate(); }
+    assert.strictEqual(launched, 0);
+});
+
+await test('screens: 5 right in a row shows the ramp message and puts a ramp on the course', async () => {
+    const el = document.body.appendChild(document.createElement('div'));
+    let clock = T0;
+    const quest = initTorchQuest(el, [], () => {}, { lockMs: 0, feedbackMs: 0, autoStart: false, autoJump: true, rng: mulberry32(53), seed: 5, now: () => (clock += 1000) });
+    const { game, run } = quest.startLevel(0);
+    for (let n = 0; n < 5; n++) {
+        while (game.mode === 'run') game.step(1 / 120);
+        await sleep(3);
+        el.querySelectorAll('.tq-plate')[run.currentGate().correctIndex].click();
+        if (n === 3) assert.strictEqual(el.querySelectorAll('.tq-turbo i.ramp.on').length, 1, '4 in a row: one ramp cell lit');
+        if (n < 4) await sleep(3);
+    }
+    assert.ok(/RAMP/.test(el.querySelector('.tq-msg').textContent));
+    await sleep(3);
+    let launched = false;
+    for (let i = 0; i < 120 * 10 && !launched; i++) { game.step(1 / 120); launched = game.flying; }
+    assert.ok(launched, 'the car takes the ramp');
 });
 
 // ---------- Screens ----------

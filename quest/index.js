@@ -1,12 +1,12 @@
 // Torch Quest: screens (map, level, power-down, flag) and the word-gate plates.
 // Design: docs/torch-quest-design.md. Rules live in run.js / mastery.js / gates.js;
 // the scrolling game is runner.js. Plates are real buttons laid over the canvas.
-import { say, sfx, unlockSticker } from '../phonics/engine.js';
+import { say, sfx, unlockSticker, reducedMotion } from '../phonics/engine.js';
 import { rollCrate, STICKER_FALLBACK_BOLTS } from './rewards.js';
 import { LEVELS, WORLDS, worldItems } from './content.js';
 import { loadState, saveState, itemState, isRusty, inForge, isLevelUnlocked, isWorldUnlocked, bossDoor, worldStars, totalStars, finishLevel, failLevel, TIERS, TICKS_TO_PROMOTE } from './mastery.js';
 import { unlikeWords } from './gates.js';
-import { createRun, createTapGuard, MAX_HEARTS, CHECKPOINT_AFTER, TURBO_STREAK } from './run.js';
+import { createRun, createTapGuard, MAX_HEARTS, CHECKPOINT_AFTER, TURBO_STREAK, RAMP_STREAK } from './run.js';
 import { buildCourse } from './level.js';
 import { createGame, VIEW } from './runner.js';
 
@@ -102,6 +102,9 @@ const CSS = `
 .tq-turbo i { width: 2cqw; height: 3cqw; border-radius: .5cqw; background: rgba(255,255,255,.2); border: .3cqw solid rgba(0,0,0,.4); }
 .tq-turbo i.on { background: #ffd23f; }
 .tq-turbo.go i { background: #ff7a1a; box-shadow: 0 0 1.2cqw #ffd23f; }
+.tq-turbo i.ramp { border-color: #4fd1ff; }
+.tq-turbo i.ramp.on, .tq-turbo.go i.ramp.on { background: #4fd1ff; box-shadow: 0 0 1.2cqw #4fd1ff; }
+.tq-turbo.go i.ramp:not(.on) { background: rgba(255,255,255,.2); box-shadow: none; }
 .tq-turbo b { display: none; position: absolute; left: 0; top: 100%; font-size: 2.4cqw; color: #ffd23f; letter-spacing: .2cqw; }
 .tq-turbo.go b { display: inline; animation: tq-pulse .5s ease-in-out infinite alternate; }
 @keyframes tq-pulse { from { transform: scale(1); } to { transform: scale(1.15); } }
@@ -361,10 +364,15 @@ export function initTorchQuest(container, words, onBack, opts = {}) {
                 `<span class="tq-pip ${run.results[i] === true ? 'ok' : run.results[i] === false ? 'no' : i === run.gateIndex ? 'now' : ''}"></span>${run.checkpoint && i === CHECKPOINT_AFTER - 1 ? '<span class="tq-pipflag">🚩</span>' : ''}`).join('') + '<span class="tq-pipflag">🏁</span>';
             $('.tq-bolts').textContent = `🔩 ${game ? game.bolts : 0}`;
             // Turbo meter: one cell per right answer in a row; full = car mode.
-            const charge = Math.min(run.streak, TURBO_STREAK);
+            // Cells 1–3 fill to Turbo; cells 4–5 count on to the next ramp (5, 10, 15 in a row).
+            const s = run.streak;
+            const toRamp = s < TURBO_STREAK ? 0 : s < RAMP_STREAK ? s - TURBO_STREAK : (s % RAMP_STREAK === 0 ? 2 : Math.max(0, (s % RAMP_STREAK) - TURBO_STREAK));
+            const cells = Array.from({ length: RAMP_STREAK }, (_, i) => i < TURBO_STREAK
+                ? `<i class="${i < Math.min(s, TURBO_STREAK) ? 'on' : ''}"></i>`
+                : `<i class="ramp ${i - TURBO_STREAK < toRamp ? 'on' : ''}"></i>`).join('');
             $('.tq-turbo').className = `tq-turbo ${run.turbo ? 'go' : ''}`;
-            $('.tq-turbo').innerHTML = `⚡${Array.from({ length: TURBO_STREAK }, (_, i) => `<i class="${i < charge ? 'on' : ''}"></i>`).join('')}<b>TURBO</b>`;
-            $('.tq-turbo').setAttribute('aria-label', run.turbo ? 'Turbo on' : `Turbo ${charge} of ${TURBO_STREAK}`);
+            $('.tq-turbo').innerHTML = `⚡${cells}🚀<b>TURBO</b>`;
+            $('.tq-turbo').setAttribute('aria-label', run.turbo ? `Turbo on, ${RAMP_STREAK - TURBO_STREAK - toRamp} more for a ramp` : `Turbo ${Math.min(s, TURBO_STREAK)} of ${TURBO_STREAK}`);
             if (level.boss && game) {
                 $('.tq-bosshp').innerHTML = `👾 ${Array.from({ length: run.total }, (_, i) => `<i class="${i < game.bossHp ? '' : 'gone'}"></i>`).join('')}`;
                 $('.tq-bosshp').setAttribute('aria-label', `${level.name}: ${game.bossHp} hits left`);
@@ -376,12 +384,15 @@ export function initTorchQuest(container, words, onBack, opts = {}) {
             canvas: $('.tq-canvas'),
             autoJump: !!opts.autoJump,
             theme: level.world.theme,
+            flips: !reducedMotion(),
             boss: level.boss ? { hp: run.total } : null,
             hooks: {
                 onJump: () => sfx.jump(),
                 onBolt: () => { sfx.coin(); hud(); },
                 onBump: () => { sfx.boing(); hud(); },
                 onSmash: () => { sfx.slam(); sfx.coin(); hud(); },
+                onLaunch: () => { sfx.whoosh(); sfx.powerUp(); },
+                onLand: () => { sfx.slam(); sfx.fanfare(); },
                 onGate: showGate,
                 onFinish: showFinish
             }
@@ -454,9 +465,10 @@ export function initTorchQuest(container, words, onBack, opts = {}) {
                 plates[index].classList.add('right');
                 sfx.lock();
                 if (level.boss) { game.hitBoss(); sfx.zap(); }
-                $('.tq-msg').textContent = res.turboOn ? '⚡ TURBO! Torch transforms!' : res.healed ? '❤️ Heart repaired!' : res.promoted ? `New block: ${res.word} is ${TIERS[res.tier]}!` : '';
+                $('.tq-msg').textContent = res.ramp && run.turbo ? '🚀 5 in a row! RAMP!' : res.turboOn ? '⚡ TURBO! Torch transforms!' : res.healed ? '❤️ Heart repaired!' : res.promoted ? `New block: ${res.word} is ${TIERS[res.tier]}!` : '';
                 if (res.healed || res.promoted || res.turboOn) sfx.powerUp();
                 if (res.turboOn) { game.setTurbo(true); sfx.roar(); }
+                if (res.ramp && run.turbo) { game.addRamp(); sfx.roar(); }
             } else {
                 if (res.turboOff) game.setTurbo(false); // a miss ends Turbo
                 plates[index]?.classList.add('wrong');

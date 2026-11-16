@@ -9,6 +9,8 @@ export const MAX_HEARTS = 3;
 export const HEAL_STREAK = 5;
 // Three right answers in a row: Torch transforms into his car until the next miss (design §13c).
 export const TURBO_STREAK = 3;
+// Five in a row (and every five after): a ramp for the car to jump (design §13c).
+export const RAMP_STREAK = 5;
 export const CHECKPOINT_AFTER = GATES_PER_LEVEL / 2;
 const CHECKPOINT_MIN_HEARTS = 2;
 
@@ -61,6 +63,7 @@ export function createRun({ levelIndex, state, rng = Math.random, now = () => Da
             if (correct) {
                 run.streak++;
                 if (!wasTurbo && run.turbo) out.turboOn = true;
+                if (run.streak % RAMP_STREAK === 0) out.ramp = true;
                 if (rec.promoted) run.promoted.push({ word: g.word, tier: rec.tier });
                 if (run.streak % HEAL_STREAK === 0 && run.hearts < MAX_HEARTS) { run.hearts++; out.healed = true; }
             } else {

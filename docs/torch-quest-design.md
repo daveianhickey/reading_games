@@ -66,8 +66,9 @@ game.**
 
 - **Tap anywhere** to jump (over gaps, crates and Darkstorm's grumpy drones). This is the light
   “video game” layer. Bumping into something bounces Torch back and spills a few bolts (the
-  coin). It never costs a heart, and an obstacle gives way after two bumps (the crate smashes,
-  a plank drops over the gap), so jumping can never stop him reaching the next word.
+  coin). It never costs a heart. A hole gets a plank after two falls, but a crate never
+  breaks when he walks into it: he has to jump it (parent's request, once jumping was easy for
+  him). Only the Turbo car smashes crates.
 - Every 10–15 seconds the path is blocked by a **word gate**. Time slows, Torch's radio says a
   word, and three plates slide in. He taps the plate with that word. Right: the gate opens and
   he runs on. Wrong: the plate crumbles and he **loses a heart**.
@@ -330,7 +331,8 @@ Why these steps:
   3 (one step per day), so Worlds 3–5 cannot be rushed in one sitting. This is the long
   incentive to memorise.
 - **Jumping stays forgiving.** Gaps widen and crates stack, so the running part keeps some
-  challenge, but a bump never costs a heart and an obstacle gives way after two bumps. Reading
+  challenge, but a bump never costs a heart (crates must be jumped; holes get a plank after two
+  falls). Reading
   stays the only thing that decides a level.
 
 ### 8b. Bosses
@@ -538,6 +540,13 @@ Prices are tuned so a good level buys one small thing.
   - The next wrong answer, or going back to the flag, ends it.
   - It never touches the gates: the same seed gives the same plates with or without Turbo (tested), and every course can be cleared at car speed (tested).
   - Code: `TURBO_STREAK` and `run.turbo` in `quest/run.js`; `setTurbo` in `quest/runner.js`.
+- **Ramp (13c.1 extended), built.** Five right in a row (and again at 10, 15…) puts a striped
+  ramp on the course just past that gate. The car drives up it, launches, does a full flip
+  (no flip with `prefers-reduced-motion`), collects a trail of 7 bolts along the jump and lands
+  with a sparkle and a fanfare. The stretch under the jump is cleared of holes and crates, so
+  the landing is always safe. The Turbo meter has 5 cells: 3 to Turbo, then 2 blue cells to the
+  ramp. A ramp only launches the car; if Turbo has ended it is just ground. Code: `RAMP_STREAK`
+  in `quest/run.js`, `addRamp` in `quest/runner.js`.
 - **The Forge (13b), built.**
   - At the flag, each word that went up a tier this run gets a forge screen: the block sits on an anvil in its old metal, and he taps 🔨 three times (sparks, clangs).
   - It comes out in its new metal with a glow, and the word is said aloud.

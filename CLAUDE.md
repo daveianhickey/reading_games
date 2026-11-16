@@ -92,9 +92,9 @@ Reading games for young children, built with vanilla JS + Vite (no framework).
 | `quest/mastery.js` | Pure logic: tiers (Scrap → Gold), 3 ticks to go up, one tier per day, rust, `pickGateItems`, level / world / boss-door unlocks. Storage `y1Quest`. |
 | `quest/gates.js` | Pure logic: builds a gate's plates for a word at a tier (hear it, look-alikes, flash-and-find, Gold sentence) with the fair-plate rules (design §5a): same first letter, same length, same ending where possible, no odd-one-in, no sound-alikes; alien words only for two-letter words. |
 | `quest/wordbank.js` | `WORD_BANK`: ~600 wrong-plate words (not targets, not from school, never scored; see below). Add words here if the alien-word test names a 3+ letter target. |
-| `quest/run.js` | Pure logic: one attempt at a level: hearts, one answer per gate, mid-level flag, stars, overheat guard, Turbo (3 right in a row). |
+| `quest/run.js` | Pure logic: one attempt at a level: hearts, one answer per gate, mid-level flag, stars, overheat guard, Turbo (3 right in a row), ramp (5 in a row). |
 | `quest/rewards.js` | Mystery crate roll at the flag (bolts, big bolts, sticker; bosses always a sticker). |
-| `quest/level.js`, `quest/runner.js` | Seeded course generator and the canvas runner (auto-run, tap to jump, a `THEMES` look per world, boss drone, Turbo car mode). Bumps cost bolts, never hearts. |
+| `quest/level.js`, `quest/runner.js` | Seeded course generator and the canvas runner (auto-run, tap to jump, a `THEMES` look per world, boss drone, Turbo car mode, ramp jumps). Bumps cost bolts, never hearts; crates never break from bumps (jump them), only the car smashes them. |
 | `quest/index.js` | `initTorchQuest(container, words, onBack)`: world map, level, plates, Turbo meter, boss fuse, power-down, flag, Forge, mystery crate and Training Bay screens. |
 | `test-quest.js` | Rules, a guessing bot (must almost never finish a level) and screen tests (part of `npm test`). |
 
