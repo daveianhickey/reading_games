@@ -266,7 +266,8 @@ export function createGame({ course, canvas, hooks = {}, autoJump = false, theme
                 ctx.fillStyle = hash(i + Math.floor(time * 2) * 0.01) > 0.15 ? '#e9edf5' : '#59627a';
                 ctx.fillRect(Math.floor((hash(i * 9.1) * VIEW.w * 2 - cam * 0.05) % VIEW.w + VIEW.w) % VIEW.w, Math.floor(hash(i * 3.7) * 110), 1, 1);
             }
-            if (T.sun) { ctx.fillStyle = T.sun; ctx.fillRect(300, T.stars ? 30 : 96, 28, 28); }
+            // The moon sits below the HUD row (it used to hide behind the progress pips).
+            if (T.sun) { ctx.fillStyle = T.sun; ctx.fillRect(300, T.stars ? 52 : 96, 28, 28); }
             if (T.lightning && (flash > 0 || hash(Math.floor(time * 3)) > 0.97)) {
                 flash = flash > 0 ? flash - 1 / 60 : 0.12;
                 ctx.fillStyle = 'rgba(233,225,255,0.35)'; ctx.fillRect(0, 0, VIEW.w, GROUND_Y);

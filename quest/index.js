@@ -15,16 +15,19 @@ const TIER_EMOJI = ['⚙️', '🟫', '⬜', '🟨'];
 const CSS = `
 .tq-root { position: fixed; inset: 0; z-index: 50; background: #141826; color: #fff; font-family: 'Outfit', sans-serif;
   display: flex; align-items: center; justify-content: center; overflow: auto; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
-.tq-stage { position: relative; width: min(100vw, calc(100vh * 16 / 9)); aspect-ratio: 16 / 9; container-type: inline-size; overflow: hidden; background: #2b3a67; }
+/* dvh = the screen height you can actually see: on phones 100vh includes the space behind the
+   address bar, which pushed the top of the game (hearts, Turbo meter) off screen. */
+.tq-stage { position: relative; width: min(100vw, calc(100vh * 16 / 9)); width: min(100vw, calc(100dvh * 16 / 9)); aspect-ratio: 16 / 9; container-type: inline-size; overflow: hidden; background: #2b3a67; }
 .tq-canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
-.tq-hud { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 2cqw; padding: 1.5cqw 2cqw; font-size: 4cqw; font-weight: 800; pointer-events: none; text-shadow: 0 2px 0 rgba(0,0,0,.5); }
+.tq-hud { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 1.4cqw; padding: 1.5cqw 2cqw; font-size: 4cqw; font-weight: 800; pointer-events: none; text-shadow: 0 2px 0 rgba(0,0,0,.5); }
 .tq-hud button { pointer-events: auto; }
 .tq-x { width: 7cqw; height: 7cqw; min-width: 40px; min-height: 40px; border-radius: 1.5cqw; border: 0; background: rgba(0,0,0,.45); color: #fff; font-size: 3.5cqw; font-weight: 800; cursor: pointer; }
 .tq-hearts { white-space: nowrap; }
 .tq-hearts span { display: inline-block; transition: transform .2s; }
 .tq-hearts .lost { filter: grayscale(1) brightness(.5); transform: scale(.8); }
-.tq-pips { flex: 1; display: flex; justify-content: center; align-items: center; gap: 1cqw; }
-.tq-pip { width: 3cqw; height: 3cqw; border-radius: .6cqw; background: rgba(255,255,255,.25); border: .4cqw solid rgba(0,0,0,.35); }
+.tq-pips { flex: 1; min-width: 0; display: flex; justify-content: center; align-items: center; gap: .7cqw; }
+.tq-bolts { white-space: nowrap; flex: none; }
+.tq-pip { width: 2.6cqw; height: 2.6cqw; flex: none; border-radius: .6cqw; background: rgba(255,255,255,.25); border: .4cqw solid rgba(0,0,0,.35); }
 .tq-pip.ok { background: #7CFC8A; } .tq-pip.no { background: #ff5d5d; } .tq-pip.now { background: #ffd23f; }
 .tq-pipflag { font-size: 3cqw; }
 .tq-gate { position: absolute; inset: 13% 0 auto 0; display: flex; flex-direction: column; align-items: center; gap: 2cqw; }
@@ -128,7 +131,7 @@ const CSS = `
   .tq-turn { display: block; }
   /* Portrait phone: the game sits at the top and the word gate gets the empty space below it,
      so nothing covers Torch or the progress bar, and plates are big, full-width buttons. */
-  .tq-root { align-items: flex-start; padding-top: max(12px, 6vh); }
+  .tq-root { align-items: flex-start; padding-top: max(12px, 6vh); padding-top: max(12px, 6dvh); }
   .tq-stage { overflow: visible; }
   .tq-gate { inset: calc(100% + 5cqw) 0 auto 0; gap: 3.5cqw; }
   .tq-speak { width: 16cqw; height: 16cqw; font-size: 8cqw; }
