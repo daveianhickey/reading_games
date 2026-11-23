@@ -4,7 +4,7 @@
 import { say, sfx, unlockSticker, reducedMotion } from '../phonics/engine.js';
 import { rollCrate, STICKER_FALLBACK_BOLTS } from './rewards.js';
 import { LEVELS, WORLDS, worldItems } from './content.js';
-import { loadState, saveState, itemState, isRusty, inForge, isLevelUnlocked, isWorldUnlocked, bossDoor, worldStars, totalStars, finishLevel, failLevel, TIERS, TICKS_TO_PROMOTE } from './mastery.js';
+import { loadState, saveState, itemState, isRusty, inForge, isLevelUnlocked, isWorldUnlocked, bossDoor, doorGoal, worldStars, totalStars, finishLevel, failLevel, TIERS, TICKS_TO_PROMOTE } from './mastery.js';
 import { unlikeWords } from './gates.js';
 import { createRun, createTapGuard, MAX_HEARTS, CHECKPOINT_AFTER, TURBO_STREAK, RAMP_STREAK } from './run.js';
 import { buildCourse } from './level.js';
@@ -96,6 +96,19 @@ const CSS = `
 .tq-world .tq-path { font-size: 20px; }
 .tq-door { font-size: 15px; font-weight: 700; color: #e9edf5; margin: 6px 0 0; }
 .tq-door b { color: #ffd23f; }
+.tq-door .ok { color: #7CFC8A; }
+.tq-door-hint { font-size: 15px; font-weight: 600; color: #e9edf5; margin: 4px 0 0; }
+.tq-wall-title { font-size: 16px; font-weight: 700; color: #aab3c5; margin: 10px 0 6px; }
+.tq-block.goal { outline: 3px dashed #ffd23f; outline-offset: 2px; }
+.tq-block.goal::before { content: '🎯'; position: absolute; top: -10px; right: -8px; font-size: 14px; }
+.tq-goal { background: rgba(255,210,63,.12); border: .4cqw solid #ffd23f; border-radius: 2cqw; padding: 1cqw 2cqw; display: flex; flex-direction: column; align-items: center; gap: 1cqw; }
+.tq-goal p { font-size: 2.8cqw; }
+.tq-goal .tq-wall { justify-content: center; gap: 1cqw; }
+.tq-goal .tq-block { min-width: 0; padding: .6cqw 1.6cqw; font-size: 3.4cqw; }
+.tq-goal .tq-block small { font-size: 1.8cqw; }
+.tq-goalbadge { position: absolute; top: 1.5cqw; left: calc(50% + 6cqw); background: #ffd23f; color: #1d2433; border-radius: 1.5cqw; padding: .4cqw 1.4cqw; font: 800 2.6cqw 'Outfit', sans-serif; box-shadow: 0 .5cqw 0 #b8860b; white-space: nowrap; }
+.tq-goalbadge[hidden] { display: none; }
+@media (orientation: portrait) { .tq-goalbadge { top: 4cqw; left: calc(50% + 10cqw); font-size: 3.6cqw; } }
 .tq-w-scrap { background: linear-gradient(120deg, #2b3a67, #8d4a2a); } .tq-w-rain { background: linear-gradient(120deg, #3d4650, #5f7d95); }
 .tq-w-park { background: linear-gradient(120deg, #0b1026, #1f3a24); } .tq-w-port { background: linear-gradient(120deg, #1f6f8b, #52524f); }
 .tq-w-storm { background: linear-gradient(120deg, #1a0f2e, #5d318a); }
@@ -213,12 +226,31 @@ export function initTorchQuest(container, words, onBack, opts = {}) {
 
     // ---------- Map ----------
 
-    function blockHTML(item) {
-        const met = !!state.items[item.id];
+    // showWord: show the word even before he has met it (the level card lists it anyway).
+    function blockHTML(item, goal = null, showWord = false) {
+        const met = !!state.items[item.id] || showWord;
         const it = itemState(state, item.id);
-        return `<div class="tq-block ${met ? `t${it.tier}` : 'new'} ${isRusty(state, item.id, now()) ? 'rusty' : ''}">
+        return `<div class="tq-block ${met ? `t${it.tier}` : 'new'} ${isRusty(state, item.id, now()) ? 'rusty' : ''} ${met && goal?.ids.has(item.id) ? 'goal' : ''}">
             ${met ? item.word : '?'}<small>${met ? `${TIERS[it.tier]}${inForge(state, item.id, now()) ? ' · in the forge' : ` ${'●'.repeat(it.ticks)}${'○'.repeat(TICKS_TO_PROMOTE - it.ticks)}`}` : '&nbsp;'}</small>
         </div>`;
+    }
+
+    // The boss door as a checklist: met parts get a ✓, and a hint says what to do next.
+    function doorHTML(door, wi) {
+        const world = WORLDS[wi];
+        const part = (met, text) => met ? `<span class="ok">✓ ${text}</span>` : `<b>${text}</b>`;
+        const levelsOk = door.levelsDone >= door.levels, starsOk = door.stars >= door.needStars, blocksOk = door.blocks >= door.needBlocks;
+        const goal = doorGoal(state, wi, now());
+        let hint = '';
+        if (!levelsOk) hint = `Finish all ${door.levels} ${world.name} levels.`;
+        else if (!starsOk) hint = `Play ${world.name} levels again for more stars.`;
+        else if (!blocksOk) {
+            hint = goal && goal.growToday === 0
+                ? `🎯 Come back tomorrow: today's ${world.name} blocks are in the forge.`
+                : `🎯 Play ${world.name} levels again to turn its word blocks ${TIERS[door.tier]} (the 🎯 blocks below). A block goes up one step a day.`;
+        }
+        return `<p class="tq-door">Boss door: ${part(levelsOk, levelsOk ? `${door.levels} levels` : `${door.levelsDone}/${door.levels} levels`)} · ${part(starsOk, starsOk ? `${door.needStars} ⭐` : `${door.stars}/${door.needStars} ⭐`)} · ${part(blocksOk, `${Math.min(door.blocks, door.needBlocks)}/${door.needBlocks} ${TIER_EMOJI[door.tier]} ${TIERS[door.tier]} blocks`)}</p>
+            ${hint ? `<p class="tq-door-hint">${hint}</p>` : ''}`;
     }
 
     function worldHTML(world, wi) {
@@ -240,7 +272,7 @@ export function initTorchQuest(container, words, onBack, opts = {}) {
                     </button>`;
                 }).join('')}
             </div>
-            ${door.open || (state.levels[LEVELS[stages.at(-1).i].id]?.stars) ? '' : `<p class="tq-door">Boss door: finish all 5 levels (${door.levelsDone}/5) · <b>${door.stars}/${door.needStars} ⭐</b> · <b>${Math.min(door.blocks, door.needBlocks)}/${door.needBlocks} ${TIER_EMOJI[door.tier]} ${TIERS[door.tier]} blocks</b></p>`}
+            ${door.open || (state.levels[LEVELS[stages.at(-1).i].id]?.stars) ? '' : doorHTML(door, wi)}
         </section>`;
     }
 
@@ -256,7 +288,12 @@ export function initTorchQuest(container, words, onBack, opts = {}) {
                 <h1>Torch Quest</h1>
                 ${WORLDS.map(worldHTML).join('')}
                 <h2>My word blocks</h2>
-                ${openWorlds.map(wi => `<div class="tq-wall" style="margin-bottom: 10px">${worldItems(wi).map(blockHTML).join('')}</div>`).join('')}
+                ${openWorlds.map(wi => {
+                    // One labelled row per world, so he can see which blocks count for which boss door.
+                    const goal = doorGoal(state, wi, now());
+                    return `<div class="tq-wall-title">${WORLDS[wi].emoji} World ${wi + 1} · ${WORLDS[wi].name}${goal ? ` · 🎯 ${goal.have}/${goal.need} ${TIERS[goal.tier]} for ${goal.boss}` : ''}</div>
+                        <div class="tq-wall" style="margin-bottom: 10px">${worldItems(wi).map(i => blockHTML(i, goal)).join('')}</div>`;
+                }).join('')}
                 <p class="tq-note">Grown-ups: a block goes up one step after 3 right answers, and only once a day. Each boss door needs blocks at a certain step, so the later worlds take several days of short play. Progress is saved in this browser on this device.</p>
                 <p class="tq-note tq-turn">↻ Turn the phone sideways for a bigger game.</p>
             </div></div>`;
@@ -270,6 +307,19 @@ export function initTorchQuest(container, words, onBack, opts = {}) {
 
     // ---------- Level intro: meet the new words (teaching happens outside the test) ----------
 
+    // Level card: the boss-door goal and which words in this run count towards it.
+    function goalPanel(level) {
+        if (level.boss) return '';
+        const goal = doorGoal(state, level.worldIndex, now());
+        if (!goal) return '';
+        const words = level.items.filter(i => goal.ids.has(i.id));
+        if (!words.length) return '';
+        return `<div class="tq-goal">
+            <p>🎯 <b>${goal.boss}'s door</b> needs ${goal.need} ${TIER_EMOJI[goal.tier]} ${TIERS[goal.tier]} blocks: <b>${goal.have}/${goal.need}</b>. These words count:</p>
+            <div class="tq-wall">${words.map(i => blockHTML(i, null, true)).join('')}</div>
+        </div>`;
+    }
+
     function showIntro(levelIndex) {
         stopLevel();
         const level = LEVELS[levelIndex];
@@ -278,6 +328,7 @@ export function initTorchQuest(container, words, onBack, opts = {}) {
                 <h2>${level.boss ? `👾 Boss: ${level.name}` : `World ${level.worldIndex + 1} · ${level.name}`}</h2>
                 <p>${level.boss ? `${level.name} drops scrap balls. Pick the right word to zap each one back! Be quick: the fuse is burning.` : 'Words on this run. Tap one to hear it.'}</p>
                 <div class="tq-row">${level.items.map(i => `<button class="tq-word" data-word="${i.word}">${i.word}</button>`).join('')}</div>
+                ${goalPanel(level)}
                 <div class="tq-row"><button class="tq-btn alt" id="tq-map">Map</button><button class="tq-btn" id="tq-go">Go! ▶</button></div>
             </div></div></div>`;
         container.querySelectorAll('.tq-word').forEach(b => b.addEventListener('click', () => say(b.dataset.word)));
@@ -353,12 +404,13 @@ export function initTorchQuest(container, words, onBack, opts = {}) {
                     <div class="tq-bolts">🔩 0</div>
                 </div>
                 <div class="tq-fuse" hidden><span></span></div>
-                <div class="tq-gate" hidden><div class="tq-prompt"></div><div class="tq-plates"></div><div class="tq-msg" aria-live="polite"></div></div>
+                <div class="tq-gate" hidden><div class="tq-goalbadge" hidden aria-label="This word counts for ${WORLDS[level.worldIndex].boss.name}'s door">🎯 ${WORLDS[level.worldIndex].boss.name}'s door</div><div class="tq-prompt"></div><div class="tq-plates"></div><div class="tq-msg" aria-live="polite"></div></div>
                 <div class="tq-overlay" hidden></div>
             </div></div>`;
         const $ = sel => container.querySelector(sel);
         const stage = $('.tq-stage'), gateEl = $('.tq-gate'), overlay = $('.tq-overlay');
         let locked = true, answered = true, lockedTaps = 0, unlockAt = 0;
+        let gateGoal = null;
 
         function hud() {
             $('.tq-hearts').innerHTML = Array.from({ length: MAX_HEARTS }, (_, i) => `<span class="${i < run.hearts ? '' : 'lost'}">❤️</span>`).join('');
@@ -405,6 +457,9 @@ export function initTorchQuest(container, words, onBack, opts = {}) {
             const gate = run.currentGate();
             locked = true; answered = false; lockedTaps = 0;
             gateEl.hidden = false;
+            // 🎯 when this word counts for the boss door. It sits by the prompt, never on a plate.
+            const goal = level.boss ? null : doorGoal(state, level.worldIndex, now());
+            $('.tq-goalbadge').hidden = !(goal && goal.ids.has(gate.item.id));
             $('.tq-msg').textContent = '';
             $('.tq-plates').innerHTML = gate.plates.map((w, i) => `<button class="tq-plate locked" data-i="${i}">${w}</button>`).join('');
             $('.tq-plates').classList.toggle('four', gate.plates.length > 3);
@@ -437,6 +492,22 @@ export function initTorchQuest(container, words, onBack, opts = {}) {
             }
         }
 
+        // Progress towards the boss-door goal after a right answer on a goal word.
+        // big: the block just reached the goal metal (a real moment).
+        function goalMessage(gate, res) {
+            if (level.boss || !gateGoal || !gateGoal.ids.has(gate.item.id)) return null;
+            const it = itemState(state, gate.item.id);
+            const goalTier = TIERS[gateGoal.tier];
+            if (res.promoted && res.tier >= gateGoal.tier) {
+                const now2 = doorGoal(state, level.worldIndex, now());
+                const have = now2 ? now2.have : gateGoal.need;
+                return { big: true, text: `🎯 ${res.word} is ${goalTier}! ${Math.min(have, gateGoal.need)}/${gateGoal.need} for ${gateGoal.boss}'s door` };
+            }
+            if (res.promoted) return { text: `🎯 ${res.word} is ${TIERS[res.tier]}! Next stop: ${goalTier}` };
+            if (inForge(state, gate.item.id, now())) return { text: `🎯 ${res.word} goes up tomorrow (it's in the forge)` };
+            return { text: `🎯 ${res.word}: ${it.ticks} of ${TICKS_TO_PROMOTE} to ${TIERS[it.tier + 1]}` };
+        }
+
         // Boss gates only: a fuse that burns down once the plates unlock. Gentle, but real.
         let fuseTimer = null;
         function startFuse() {
@@ -461,6 +532,8 @@ export function initTorchQuest(container, words, onBack, opts = {}) {
             fuseTimer = null;
             $('.tq-fuse').hidden = true;
             const overheat = guard.check(lockedTaps, now() - unlockAt);
+            gateGoal = level.boss ? null : doorGoal(state, level.worldIndex, now()); // before this answer counts
+            const answeredGate = run.currentGate();
             const res = run.answer(index);
             saveState(state);
             const plates = [...$('.tq-plates').querySelectorAll('.tq-plate')];
@@ -468,8 +541,10 @@ export function initTorchQuest(container, words, onBack, opts = {}) {
                 plates[index].classList.add('right');
                 sfx.lock();
                 if (level.boss) { game.hitBoss(); sfx.zap(); }
-                $('.tq-msg').textContent = res.ramp && run.turbo ? '🚀 5 in a row! RAMP!' : res.turboOn ? '⚡ TURBO! Torch transforms!' : res.healed ? '❤️ Heart repaired!' : res.promoted ? `New block: ${res.word} is ${TIERS[res.tier]}!` : '';
-                if (res.healed || res.promoted || res.turboOn) sfx.powerUp();
+                const goalMsg = goalMessage(answeredGate, res);
+                $('.tq-msg').textContent = goalMsg?.big ? goalMsg.text : res.ramp && run.turbo ? '🚀 5 in a row! RAMP!' : res.turboOn ? '⚡ TURBO! Torch transforms!' : res.healed ? '❤️ Heart repaired!' : goalMsg ? goalMsg.text : res.promoted ? `New block: ${res.word} is ${TIERS[res.tier]}!` : '';
+                if (goalMsg?.big) sfx.fanfare();
+                else if (res.healed || res.promoted || res.turboOn) sfx.powerUp();
                 if (res.turboOn) { game.setTurbo(true); sfx.roar(); }
                 if (res.ramp && run.turbo) { game.addRamp(); sfx.roar(); }
             } else {
@@ -634,7 +709,7 @@ export function initTorchQuest(container, words, onBack, opts = {}) {
                 <h2>${level.boss ? `${level.name} flew off, covered in oil!` : 'You made it!'}</h2>
                 ${level.boss && levelIndex + 1 < LEVELS.length ? `<p>🗺️ World ${level.worldIndex + 2} · ${LEVELS[levelIndex + 1].world.name} is open!</p>` : ''}
                 ${level.boss && levelIndex + 1 >= LEVELS.length ? '<p>🏆 Darkstorm is beaten. You finished Torch Quest!</p>' : ''}
-                ${door ? `<p>Boss door: ${door.levelsDone}/5 levels · ${door.stars}/${door.needStars} ⭐ · ${Math.min(door.blocks, door.needBlocks)}/${door.needBlocks} ${TIERS[door.tier]} blocks</p>` : ''}
+                ${door ? doorHTML(door, level.worldIndex) : ''}
                 <div class="tq-stars" aria-label="${run.stars} stars">${starText(run.stars)}</div>
                 <p>🔩 ${game.bolts} bolts${run.usedCheckpoint ? ' · No flag restart next time for more stars!' : run.stars < 3 ? ' · Keep all 3 hearts for 3 stars!' : ''}</p>
                 ${forge.length ? `<p>In the forge until tomorrow: ${forge.join(', ')}</p>` : ''}

@@ -349,6 +349,20 @@ ball is a gate: pick the right word to zap it back up and knock a bar off the dr
   quickly, not words he can puzzle out slowly.
 - Beating a boss opens the next world. The drone flies off covered in oil, never hurt.
 - A beaten boss stays open on the map, even if a block later slips back a step.
+- **Only the world's own words count for its door.** Silver blocks from earlier worlds (e.g.
+  *rich*, *moon*) do not count for Dark Park's door: it needs Dark Park words at Silver.
+
+**Showing the door goal (so it is clear and a little exciting):**
+- *Map:* the door is a checklist. Met parts show ✓ (“✓ 10 ⭐”, never “15/10”), and a hint says what
+  to do next (“Play Dark Park levels again to turn its word blocks Silver”, or “Come back
+  tomorrow” when every remaining block already went up today). “My word blocks” has one
+  labelled row per world, with the door count, and the blocks that still need to go up are
+  marked 🎯.
+- *Level card:* “🎯 Shade's door needs 4 Silver blocks: 1/4. These words count:” with each of
+  this run's goal words in its current metal.
+- *In the level:* a goal word's gate shows a 🎯 badge beside the 🔊 (never on a plate, so it
+  gives nothing away). A right answer shows progress (“🎯 look: 2 of 3 to Silver”), and
+  reaching the goal metal gets a fanfare: “🎯 look is Silver! 2/4 for Shade's door”.
 
 With one tier per day, reaching Gold on a whole world takes at least a week of short sessions,
 and the full game is a term's worth of play. Later: a bonus world built from the grown-up's

@@ -154,6 +154,25 @@ export function bossDoor(state, worldIndex) {
     return door;
 }
 
+// The boss-door block goal for a world, while it is still to do (null once the door's block
+// count is met or the boss is beaten). ids: this world's words that are not yet at the goal tier
+// (the words he still needs to raise). growToday: how many of them can still go up a step today.
+export function doorGoal(state, worldIndex, now = Date.now()) {
+    const bossIdx = bossLevelIndex(worldIndex);
+    if (stars(state, LEVELS[bossIdx].id) >= 1) return null;
+    const door = bossDoor(state, worldIndex);
+    if (door.blocks >= door.needBlocks) return null;
+    const below = worldItems(worldIndex).filter(i => itemState(state, i.id).tier < door.tier);
+    return {
+        boss: WORLDS[worldIndex].boss.name,
+        tier: door.tier,
+        have: door.blocks,
+        need: door.needBlocks,
+        ids: new Set(below.map(i => i.id)),
+        growToday: below.filter(i => itemState(state, i.id).promoDay !== dayOf(now)).length
+    };
+}
+
 export function isLevelUnlocked(levelIndex, state) {
     const lvl = LEVELS[levelIndex];
     if (!isWorldUnlocked(lvl.worldIndex, state)) return false;
