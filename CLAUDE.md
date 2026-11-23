@@ -89,7 +89,7 @@ Reading games for young children, built with vanilla JS + Vite (no framework).
 | File | Role |
 | --- | --- |
 | `quest/content.js` | `WORLDS` → levels → items, each world's skill settings (plates, gate floor, flag, obstacles, boss), `HOMOPHONES`, `DISTRACTOR_WORDS` (older wrong-plate list). `LEVELS` is every stage in order (5 levels + boss per world). |
-| `quest/mastery.js` | Pure logic: tiers (Scrap → Gold), 3 ticks to go up, one tier per day, rust, `pickGateItems`, level / world / boss-door unlocks. Storage `y1Quest`. |
+| `quest/mastery.js` | Pure logic: tiers (Scrap → Gold), 3 ticks to go up, one tier per day, rust, `pickGateItems`, level / world / boss-door unlocks, `doorGoal` (which of a world's words still need to go up for its door). Storage `y1Quest`. |
 | `quest/gates.js` | Pure logic: builds a gate's plates for a word at a tier (hear it, look-alikes, flash-and-find, Gold sentence) with the fair-plate rules (design §5a): same first letter, same length, same ending where possible, no odd-one-in, no sound-alikes; alien words only for two-letter words. |
 | `quest/wordbank.js` | `WORD_BANK`: ~600 wrong-plate words (not targets, not from school, never scored; see below). Add words here if the alien-word test names a 3+ letter target. |
 | `quest/run.js` | Pure logic: one attempt at a level: hearts, one answer per gate, mid-level flag, stars, overheat guard, Turbo (3 right in a row), ramp (5 in a row). |

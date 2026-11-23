@@ -1015,5 +1015,101 @@ await test('rewards: crates are varied, careful play pays better, and bosses alw
     assert.strictEqual(rollCrate({ boss: true }).kind, 'sticker');
 });
 
+// ---------- Boss-door goals (map checklist, labelled block rows, 🎯 words in a level) ----------
+
+function darkParkSave({ copperTicks = 2 } = {}) {
+    const st = fresh();
+    for (const w of [1, 2]) { for (let l = 1; l <= 5; l++) st.levels[`${w}-${l}`] = { stars: 3, fails: 0 }; st.levels[`${w}-boss`] = { stars: 1, fails: 0 }; }
+    for (let l = 1; l <= 5; l++) st.levels[`3-${l}`] = { stars: 3, fails: 0 };
+    // Silver blocks from earlier worlds do not count for Dark Park (rich, drink, moon).
+    for (const id of ['ch:rich', 'nk:drink', 'oo-spoon:moon']) st.items[id] = { tier: 2, ticks: 0, promoDay: null, missDay: null, misses: 0, last: T0 };
+    // Dark Park level 3-1's words are Copper, one right answer from Silver.
+    for (const item of LEVELS.find(l => l.id === '3-1').items) st.items[item.id] = { tier: 1, ticks: copperTicks, promoDay: null, missDay: null, misses: 0, last: T0 - DAY };
+    return st;
+}
+
+await test('door goal: only the world\'s own words count; earlier worlds\' Silver blocks do not', () => {
+    const st = darkParkSave();
+    const goal = m.doorGoal(st, 2, T0);
+    assert.strictEqual(goal.have, 0, 'rich, drink and moon are World 1–2 words');
+    assert.strictEqual(goal.need, 4);
+    assert.strictEqual(goal.tier, 2);
+    assert.strictEqual(goal.boss, 'Shade');
+    assert.ok(goal.ids.has('w-when') && !goal.ids.has('oo-spoon:moon'));
+    assert.ok(goal.growToday > 0);
+    for (const item of worldItems(2).slice(0, 4)) st.items[item.id] = { tier: 2, ticks: 0, promoDay: null, missDay: null, misses: 0, last: T0 };
+    assert.strictEqual(m.doorGoal(st, 2, T0), null, 'met: no goal');
+    // Everything left already went up today: come back tomorrow.
+    const st2 = fresh();
+    for (const item of worldItems(0)) st2.items[item.id] = { tier: 0, ticks: 0, promoDay: m.dayOf(T0), missDay: null, misses: 0, last: T0 };
+    assert.strictEqual(m.doorGoal(st2, 0, T0).growToday, 0);
+});
+
+await test('map: the boss door is a checklist with a hint, and block rows are labelled by world', async () => {
+    m.saveState(darkParkSave());
+    const el = document.body.appendChild(document.createElement('div'));
+    initTorchQuest(el, [], () => {}, { now: () => T0, autoStart: false });
+    const door = el.querySelector('[data-world="2"] .tq-door');
+    assert.ok(door, 'Dark Park door line');
+    assert.ok(/✓ 5 levels/.test(door.textContent) && /✓ 10 ⭐/.test(door.textContent), door.textContent);
+    assert.ok(!/15\/10/.test(door.textContent), 'no over-count');
+    assert.ok(/0\/4 ⬜ Silver blocks/.test(door.textContent));
+    assert.ok(/Play Dark Park levels again to turn its word blocks Silver/.test(el.querySelector('[data-world="2"] .tq-door-hint').textContent));
+    const titles = [...el.querySelectorAll('.tq-wall-title')].map(t => t.textContent);
+    assert.strictEqual(titles.length, 3);
+    assert.ok(/World 3 · Dark Park · 🎯 0\/4 Silver for Shade/.test(titles[2]), titles[2]);
+    const walls = el.querySelectorAll('.tq-wall');
+    assert.ok(walls[2].querySelectorAll('.tq-block.goal').length > 0, 'Dark Park blocks marked 🎯');
+    assert.strictEqual(walls[0].querySelectorAll('.tq-block.goal').length, 0, 'World 1 blocks are not goal blocks');
+});
+
+await test('level: the card shows the goal and its words; 🎯 shows on goal gates; reaching Silver is announced', async () => {
+    m.saveState(darkParkSave());
+    const el = document.body.appendChild(document.createElement('div'));
+    let clock = T0;
+    const quest = initTorchQuest(el, [], () => {}, { lockMs: 0, feedbackMs: 0, autoStart: false, autoJump: true, rng: mulberry32(61), seed: 5, now: () => (clock += 1000) });
+    const li = LEVELS.findIndex(l => l.id === '3-1');
+    el.querySelector(`.tq-level[data-level="${li}"]`).click();
+    const panel = el.querySelector('.tq-goal');
+    assert.ok(panel && /Shade's door/.test(panel.textContent) && /0\/4/.test(panel.textContent));
+    assert.strictEqual(panel.querySelectorAll('.tq-block').length, LEVELS[li].items.length, 'every 3-1 word counts');
+    const { game, run } = quest.startLevel(li);
+    let badges = 0, plain = 0, silver = 0;
+    for (let n = 0; n < 8 && run.status === 'running'; n++) {
+        while (game.mode === 'run') game.step(1 / 120);
+        await sleep(3);
+        const gate = run.currentGate();
+        // A goal word is a Dark Park word still below Silver (one that just went Silver drops out).
+        const isGoal = m.doorGoal(quest.state, 2, clock)?.ids.has(gate.item.id) || false;
+        const shown = !el.querySelector('.tq-goalbadge').hidden;
+        assert.strictEqual(shown, isGoal, `${gate.word}: badge only on Dark Park words still to raise`);
+        shown ? badges++ : plain++;
+        assert.ok(!el.querySelector('.tq-plates').textContent.includes('🎯'), 'never on a plate');
+        el.querySelectorAll('.tq-plate')[gate.correctIndex].click();
+        const msg = el.querySelector('.tq-msg').textContent;
+        if (/is Silver! \d\/4 for Shade's door/.test(msg)) silver++;
+        await sleep(3);
+    }
+    assert.ok(badges > 0 && plain > 0, 'review words from other worlds get no badge');
+    assert.ok(silver >= 1, 'reaching Silver is announced with the door count');
+});
+
+await test('level: a goal word that is not ready yet shows how close it is', async () => {
+    m.saveState(darkParkSave({ copperTicks: 0 }));
+    const el = document.body.appendChild(document.createElement('div'));
+    let clock = T0;
+    const quest = initTorchQuest(el, [], () => {}, { lockMs: 0, feedbackMs: 0, autoStart: false, autoJump: true, rng: mulberry32(62), seed: 5, now: () => (clock += 1000) });
+    const { game, run } = quest.startLevel(LEVELS.findIndex(l => l.id === '3-1'));
+    const msgs = [];
+    for (let n = 0; n < 8 && run.status === 'running'; n++) {
+        while (game.mode === 'run') game.step(1 / 120);
+        await sleep(3);
+        el.querySelectorAll('.tq-plate')[run.currentGate().correctIndex].click();
+        msgs.push(el.querySelector('.tq-msg').textContent);
+        await sleep(3);
+    }
+    assert.ok(msgs.some(t => /🎯 \w+: 1 of 3 to Silver/.test(t)), msgs.join(' | '));
+});
+
 console.log(failures ? `\n${failures} Torch Quest test(s) failed` : '\nAll Torch Quest tests passed');
 process.exit(failures ? 1 : 0);
